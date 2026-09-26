@@ -45,7 +45,7 @@ export default function Shop() {
   return (
     <section id="shop" className="px-5 py-16 md:py-24">
       <div className="mx-auto max-w-6xl">
-        <SectionHeading eyebrow="Shop" title="Ready-to-Shop & Custom Nail Sets" sub="Reusable press-on nail sets, hand-painted in our Rajkot studio and shipped to your door." />
+        <SectionHeading eyebrow="Shop" title="Shop Press-Ons" sub="Reusable press-on nail sets, hand-painted in our Rajkot studio and shipped to your door." />
 
         <PromoBanner placement="shop" className="mx-auto mb-8 max-w-xl" />
 
