@@ -7,7 +7,7 @@ import { useSiteContent, useSiteContentList } from "@/hooks/use-site-content.ts"
 type Faq = { q: string; a: string };
 
 const DEFAULT_FAQS: Faq[] = [
-  { q: "Where is the best nail art studio in Rajkot?", a: "Bold & Brilliant by Janvi Sarang is at Astha Chowk, Railnagar, Rajkot - 360001. Girls and women visit us from all over Rajkot and Gujarat for bridal nails, extensions and custom nail art." },
+  { q: "Where is the best nail art studio in Rajkot?", a: "Bold & Brilliant is at Astha Chowk, Railnagar, Rajkot - 360001. Girls and women visit us from all over Rajkot and Gujarat for bridal nails, extensions and custom nail art." },
   { q: "How long does a nail art appointment take?", a: "Most sets take 1 to 2 hours. Bridal and detailed 3D designs can take up to 3 hours." },
   { q: "How long will my nail art last?", a: "Gel and extensions usually last 3 to 4 weeks with proper care." },
   { q: "Can I bring my own design reference?", a: "Absolutely. Share a photo while booking and we'll customise it for you." },
