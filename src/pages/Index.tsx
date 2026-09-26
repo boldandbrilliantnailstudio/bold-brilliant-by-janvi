@@ -3,7 +3,6 @@ import Hero from "./_components/hero.tsx";
 import Showcase from "./_components/showcase.tsx";
 import Gallery from "./_components/gallery.tsx";
 import About from "./_components/about.tsx";
-import Founder from "./_components/founder.tsx";
 import Testimonials from "./_components/testimonials.tsx";
 import OrderGuide from "./_components/order-guide.tsx";
 import FaqContact from "./_components/faq-contact.tsx";
@@ -13,8 +12,8 @@ import BottomNav from "./_components/bottom-nav.tsx";
 import PromoBanner from "./_components/promo-banner.tsx";
 import PopupBanner from "./_components/popup-banner.tsx";
 
-// Shop, Book and My Orders each live on their own page now - see src/pages/Shop.tsx, Book.tsx
-// and Orders.tsx - so they no longer render here.
+// Shop, Book, My Orders and Founder each live on their own page now - see src/pages/Shop.tsx,
+// Book.tsx, Orders.tsx and Founder.tsx - so they no longer render here.
 export default function Index() {
   return (
     <>
@@ -25,7 +24,6 @@ export default function Index() {
         <Showcase />
         <Gallery />
         <About />
-        <Founder />
         <Testimonials />
         <OrderGuide />
         <FaqContact />
