@@ -84,7 +84,7 @@ export default function Hero() {
           transition={{ duration: 0.9, delay: 0.35, ease }}
           className="mx-auto max-w-xl pt-6 text-base text-muted-foreground md:text-lg"
         >
-          Rajkot's premium nail art studio for bridal nails, extensions, French tips and 3D designs, hand-crafted with precision and care by Janvi.
+          Rajkot's premium nail art studio for bridal nails, extensions, French tips and 3D designs, hand-crafted with precision and care.
         </motion.p>
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 20 }}
