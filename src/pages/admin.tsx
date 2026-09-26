@@ -110,11 +110,11 @@ function Login({ onSignedIn }: { onSignedIn: (password: string) => void }) {
   return (
     <div className="grid min-h-screen place-items-center bg-secondary/40 px-5">
       <form onSubmit={submit} className="w-full max-w-sm rounded-3xl border bg-card p-8 shadow-xl">
-        <div className="flex items-center gap-3">
-          <img src={logoUrl} alt={brand} className="size-12 shrink-0 rounded-full object-cover ring-1 ring-border" />
+        <div className="flex flex-col items-center gap-3 text-center">
+          <img src={logoUrl} alt={brand} className="size-24 shrink-0 rounded-full object-cover ring-1 ring-border" />
           <h1 className="font-serif text-2xl leading-tight">{brand}</h1>
         </div>
-        <p className="pt-4 text-sm text-muted-foreground">Enter the admin password to manage your website.</p>
+        <p className="pt-4 text-center text-sm text-muted-foreground">Enter the admin password to manage your website.</p>
         <input
           type="password"
           required
