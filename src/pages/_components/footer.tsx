@@ -6,6 +6,7 @@ import { useSiteContent } from "@/hooks/use-site-content.ts";
 // Only the sections that live on the home page and aren't already in the header/bottom nav.
 const FOOTER_LINKS = [
   { label: "About", href: "/#about" },
+  { label: "Founder", href: "/founder" },
   { label: "FAQ", href: "/#faq" },
   { label: "Contact", href: "/#contact" },
 ] as const;
@@ -98,14 +99,14 @@ export default function Footer() {
             <img src={settings.logoUrl} alt={settings.brand} className="mt-1 size-12 shrink-0 rounded-full object-cover ring-1 ring-border" />
             <div className="text-left">
               <p className="font-serif text-2xl font-semibold leading-tight">{settings.brand}</p>
-              <p className="text-sm leading-snug text-muted-foreground">{settings.byline} · Nail Art Studio, Rajkot, Gujarat 360001</p>
+              <p className="text-sm leading-snug text-muted-foreground">Nail Art Studio, Rajkot, Gujarat 360001</p>
             </div>
           </div>
           <SocialButtons />
         </div>
 
         <div className="mx-auto mt-8 flex max-w-6xl flex-col items-center gap-3 border-t pt-8 text-center text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} {settings.brand} {settings.byline}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {settings.brand}. All rights reserved.</p>
           <div className="flex flex-wrap justify-center gap-6">
             {Object.entries(DEFAULT_POLICIES).map(([key, p]) => (
               <Dialog key={key}>
