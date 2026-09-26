@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { ShoppingBasket, Sparkles, Truck } from "lucide-react";
-import { WhatsappLogo } from "@phosphor-icons/react";
+import { MessageSquareText, ShoppingBasket, Sparkles, Truck } from "lucide-react";
 import { toast } from "sonner";
 import Reveal, { SectionHeading } from "@/components/reveal.tsx";
-import { useSiteSettings, whatsappLinkFor } from "@/hooks/use-site-settings.tsx";
+import { useSiteSettings } from "@/hooks/use-site-settings.tsx";
 import { useProducts, type Product } from "@/hooks/use-products.ts";
 import { useCart } from "@/hooks/use-cart.tsx";
 import type { CheckoutOrder } from "@/lib/catalog.ts";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import CheckoutDialog from "./checkout-dialog.tsx";
+import CustomRequestDialog from "./custom-request-dialog.tsx";
 import PromoBanner from "./promo-banner.tsx";
 
 const CUSTOM_SETS = [
@@ -22,14 +22,10 @@ const FALLBACK_IMG = "https://images.unsplash.com/photo-1610992015762-45dca7fa3a
 export default function Shop() {
   const [tab, setTab] = useState<"ready" | "custom">("ready");
   const [checkout, setCheckout] = useState<CheckoutOrder | null>(null);
+  const [customSet, setCustomSet] = useState<string | null>(null);
   const { add } = useCart();
   const products = useProducts();
   const settings = useSiteSettings();
-
-  const orderCustom = (name: string) => {
-    const text = `Hello! I'm interested in the ${name}. Could you help me with the design and pricing?`;
-    window.open(whatsappLinkFor(settings.whatsappNumber, text), "_blank", "noopener");
-  };
 
   const addToBasket = (p: Product) => {
     if (p.soldOut) return;
@@ -125,8 +121,8 @@ export default function Shop() {
                   <h3 className="pt-5 font-serif text-2xl">{s.name}</h3>
                   <p className="pt-1 text-sm font-medium text-primary">{s.price}</p>
                   <p className="flex-1 pt-2 text-sm text-muted-foreground">{s.desc}</p>
-                  <button onClick={() => orderCustom(s.name)} className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-2.5 text-sm font-medium text-white transition-transform hover:scale-[1.02]">
-                    <WhatsappLogo size={16} weight="fill" /> Enquire on WhatsApp
+                  <button onClick={() => setCustomSet(s.name)} className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-transform hover:scale-[1.02]">
+                    <MessageSquareText className="size-4" /> Request This Design
                   </button>
                 </div>
               </Reveal>
@@ -143,6 +139,7 @@ export default function Shop() {
       </div>
 
       {checkout && <CheckoutDialog order={checkout} onClose={() => setCheckout(null)} />}
+      {customSet && <CustomRequestDialog setName={customSet} onClose={() => setCustomSet(null)} />}
     </section>
   );
 }

@@ -1,8 +1,9 @@
 // Single admin endpoint for every simple content table: Shop products, Coupons, Coupon
-// banners, Reviews, Bookings, Site settings (contacts/hours/social toggles/booking message),
-// Site content (policy pages), the Invoice template and Email templates.
+// banners, Reviews, Bookings, Custom set requests, Site settings (contacts/hours/social toggles/
+// booking message), Site content (policy pages), the Invoice template and Email templates.
 // Protected by the shared admin password. Env vars (Vercel): ADMIN_PASSWORD,
-// SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, RESEND_API_KEY (for booking emails).
+// SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, RESEND_API_KEY (for booking emails),
+// TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (custom request alerts).
 //
 // Usage from the admin panel:
 //   GET    /api/admin?resource=products                 -> list all rows
@@ -10,10 +11,12 @@
 //   PATCH  /api/admin?resource=products                  body: { id, ...fields to update }
 //   DELETE /api/admin?resource=products&id=<uuid>
 //   POST   /api/admin?resource=bookings&action=email     body: { id } -> emails the customer
+//   POST   /api/admin?resource=custom_requests&action=telegram-setup -> connects the Telegram bot
 // Singleton resources (site_settings, invoice_template) ignore id and always target row 1.
 // site_content and email_templates are keyed by `key` instead of `id`.
 import { checkAdminPassword, dbFetch, getEnv, q, rejectWrongPassword, type ApiRequest, type ApiResponse } from "./_lib/db.js";
 import { bookingVars, sendTemplateEmail } from "./_lib/email.js";
+import { connectTelegram } from "./_lib/telegram.js";
 
 type Resource = {
   table: string;
@@ -63,6 +66,11 @@ const RESOURCES: Record<string, Resource> = {
     order: "created_at.desc",
     writable: ["status", "admin_note"], // admin can only update status/note, never the request itself
   },
+  custom_requests: {
+    table: "custom_requests",
+    order: "created_at.desc",
+    writable: ["status", "admin_note"], // the customer's request itself is never edited
+  },
   site_settings: {
     table: "site_settings",
     writable: [
@@ -96,6 +104,11 @@ type BookingRow = {
   id: string; booking_number: number; name: string; phone: string; email: string | null;
   service: string; preferred_date: string; preferred_time: string; message: string | null; status: string;
 };
+
+function firstHeader(req: ApiRequest, key: string): string | undefined {
+  const v = req.headers?.[key];
+  return Array.isArray(v) ? v[0] : v;
+}
 
 async function emailBooking(env: { supabaseUrl: string; serviceKey: string }, id: string, res: ApiResponse) {
   if (!process.env.RESEND_API_KEY) {
@@ -153,6 +166,13 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return;
       }
       await emailBooking(env, id, res);
+      return;
+    }
+
+    if (req.method === "POST" && resourceName === "custom_requests" && q(req, "action") === "telegram-setup") {
+      const result = await connectTelegram(firstHeader(req, "x-forwarded-host") ?? firstHeader(req, "host"));
+      if (result.ok) res.status(200).json({ ok: true, message: result.message });
+      else res.status(400).json({ error: result.message });
       return;
     }
 

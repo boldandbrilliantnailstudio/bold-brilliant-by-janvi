@@ -13,6 +13,7 @@ import ProductsTab from "./_admin/products-tab.tsx";
 import CouponsTab from "./_admin/coupons-tab.tsx";
 import BannersTab from "./_admin/banners-tab.tsx";
 import BookingsTab from "./_admin/bookings-tab.tsx";
+import CustomRequestsTab from "./_admin/custom-requests-tab.tsx";
 import ReviewsTab from "./_admin/reviews-tab.tsx";
 import SiteSettingsTab from "./_admin/site-settings-tab.tsx";
 import ContentTab from "./_admin/content-tab.tsx";
@@ -23,6 +24,7 @@ const TABS = [
   { id: "dashboard", label: "Dashboard", group: "manage", Component: DashboardTab },
   { id: "orders", label: "Orders", group: "manage", Component: OrdersTab },
   { id: "bookings", label: "Bookings", group: "manage", Component: BookingsTab },
+  { id: "requests", label: "Custom Requests", group: "manage", Component: CustomRequestsTab },
   { id: "products", label: "Shop", group: "manage", Component: ProductsTab },
   { id: "coupons", label: "Coupons", group: "manage", Component: CouponsTab },
   { id: "banners", label: "Coupon Banners", group: "manage", Component: BannersTab },

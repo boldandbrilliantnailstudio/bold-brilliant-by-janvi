@@ -28,6 +28,7 @@ export type Resource =
   | "promo_banners"
   | "reviews"
   | "bookings"
+  | "custom_requests"
   | "site_settings"
   | "site_content"
   | "invoice_template"
@@ -45,6 +46,8 @@ export const adminApi = {
     request<{ url?: string; error?: string }>(password, "/api/admin-upload", { method: "POST", body: JSON.stringify({ dataUrl, folder }) }),
   emailBooking: (password: string, id: string) =>
     request<{ ok?: boolean; error?: string }>(password, "/api/admin?resource=bookings&action=email", { method: "POST", body: JSON.stringify({ id }) }),
+  setupTelegram: (password: string) =>
+    request<{ ok?: boolean; message?: string; error?: string }>(password, "/api/admin?resource=custom_requests&action=telegram-setup", { method: "POST", body: "{}" }),
 };
 
 // Opens an invoice in a new tab. The password travels in a header (never in the URL/history).
