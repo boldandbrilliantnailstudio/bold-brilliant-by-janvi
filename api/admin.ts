@@ -1,6 +1,6 @@
-// Single admin endpoint for every simple content table: Shop products, Coupons, Coupon
-// banners, Reviews, Bookings, Custom set requests, Site settings (contacts/hours/social toggles/
-// booking message), Site content (policy pages), the Invoice template and Email templates.
+// Single admin endpoint for every simple content table: Shop products, Custom sets, Coupons,
+// Coupon banners, Reviews, Bookings, Custom set requests, Site settings (contacts/hours/social
+// toggles/booking message), Site content (policy pages), the Invoice template and Email templates.
 // Protected by the shared admin password. Env vars (Vercel): ADMIN_PASSWORD,
 // SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, RESEND_API_KEY (for booking emails),
 // TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (custom request alerts).
@@ -34,6 +34,13 @@ const RESOURCES: Record<string, Resource> = {
     table: "products",
     order: "sort_order.asc",
     writable: ["name", "description", "price", "compare_at_price", "image_url", "stock", "sold_out", "is_active", "sort_order"],
+    allowInsert: true,
+    allowDelete: true,
+  },
+  custom_sets: {
+    table: "custom_sets",
+    order: "sort_order.asc",
+    writable: ["name", "price_label", "description", "image_url", "is_active", "sort_order"],
     allowInsert: true,
     allowDelete: true,
   },

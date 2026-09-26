@@ -24,6 +24,7 @@ async function request<T>(password: string, url: string, init?: RequestInit): Pr
 
 export type Resource =
   | "products"
+  | "custom_sets"
   | "coupons"
   | "promo_banners"
   | "reviews"

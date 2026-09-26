@@ -10,6 +10,7 @@ import { clearStoredPassword, getStoredPassword, storePassword } from "./_admin/
 import DashboardTab from "./_admin/dashboard-tab.tsx";
 import OrdersTab from "./_admin/orders-tab.tsx";
 import ProductsTab from "./_admin/products-tab.tsx";
+import CustomSetsTab from "./_admin/custom-sets-tab.tsx";
 import CouponsTab from "./_admin/coupons-tab.tsx";
 import BannersTab from "./_admin/banners-tab.tsx";
 import BookingsTab from "./_admin/bookings-tab.tsx";
@@ -26,6 +27,7 @@ const TABS = [
   { id: "bookings", label: "Bookings", group: "manage", Component: BookingsTab },
   { id: "requests", label: "Custom Requests", group: "manage", Component: CustomRequestsTab },
   { id: "products", label: "Shop", group: "manage", Component: ProductsTab },
+  { id: "custom-sets", label: "Custom Sets", group: "manage", Component: CustomSetsTab },
   { id: "coupons", label: "Coupons", group: "manage", Component: CouponsTab },
   { id: "banners", label: "Coupon Banners", group: "manage", Component: BannersTab },
   { id: "reviews", label: "Reviews", group: "manage", Component: ReviewsTab },
