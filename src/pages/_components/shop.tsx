@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import Reveal, { SectionHeading } from "@/components/reveal.tsx";
 import { useSiteSettings } from "@/hooks/use-site-settings.tsx";
 import { useProducts, type Product } from "@/hooks/use-products.ts";
+import { useCustomSets } from "@/hooks/use-custom-sets.ts";
 import { useCart } from "@/hooks/use-cart.tsx";
 import type { CheckoutOrder } from "@/lib/catalog.ts";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
@@ -11,13 +12,50 @@ import CheckoutDialog from "./checkout-dialog.tsx";
 import CustomRequestDialog from "./custom-request-dialog.tsx";
 import PromoBanner from "./promo-banner.tsx";
 
-const CUSTOM_SETS = [
-  { name: "Custom Everyday Set", price: "Starts at ₹699", desc: "Your choice of shape, length and 1-2 colours." },
-  { name: "Custom 3D / Charm Set", price: "Starts at ₹1,299", desc: "Hand-placed charms, chrome, or 3D detailing." },
-  { name: "Custom Bridal Set", price: "Starts at ₹1,999", desc: "Fully personalised bridal design with trial option." },
-];
-
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1610992015762-45dca7fa3a85?fm=webp&q=70&fit=crop&w=500&h=625";
+
+function CustomSetsGrid({ onRequest }: { onRequest: (name: string) => void }) {
+  const sets = useCustomSets();
+  if (sets === null) {
+    return (
+      <div className="grid gap-5 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-64 w-full rounded-3xl" />
+        ))}
+      </div>
+    );
+  }
+  if (sets.length === 0) {
+    return <p className="text-center text-sm text-muted-foreground">Custom sets are coming soon. Please check back later.</p>;
+  }
+  return (
+    <div className="grid gap-5 sm:grid-cols-3">
+      {sets.map((s, i) => (
+        <Reveal key={s.id} delay={i * 0.08}>
+          <div className="flex h-full flex-col overflow-hidden rounded-3xl border bg-card/70 backdrop-blur transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10">
+            {s.imageUrl && <img src={s.imageUrl} alt={s.name} loading="lazy" className="aspect-[4/3] w-full object-cover" />}
+            <div className="flex flex-1 flex-col p-6">
+              {!s.imageUrl && (
+                <div className="mb-5 grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
+                  <Sparkles className="size-6" />
+                </div>
+              )}
+              <h3 className="font-serif text-2xl">{s.name}</h3>
+              {s.priceLabel && <p className="pt-1 text-sm font-medium text-primary">{s.priceLabel}</p>}
+              <p className="flex-1 pt-2 text-sm text-muted-foreground">{s.description}</p>
+              <button
+                onClick={() => onRequest(s.name)}
+                className="mt-5 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-transform hover:scale-[1.02]"
+              >
+                <MessageSquareText className="size-4" /> Request This Design
+              </button>
+            </div>
+          </div>
+        </Reveal>
+      ))}
+    </div>
+  );
+}
 
 export default function Shop() {
   const [tab, setTab] = useState<"ready" | "custom">("ready");
@@ -111,23 +149,7 @@ export default function Shop() {
             </div>
           )
         ) : (
-          <div className="grid gap-5 sm:grid-cols-3">
-            {CUSTOM_SETS.map((s, i) => (
-              <Reveal key={s.name} delay={i * 0.08}>
-                <div className="flex h-full flex-col rounded-3xl border bg-card/70 p-6 backdrop-blur transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10">
-                  <div className="grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-                    <Sparkles className="size-6" />
-                  </div>
-                  <h3 className="pt-5 font-serif text-2xl">{s.name}</h3>
-                  <p className="pt-1 text-sm font-medium text-primary">{s.price}</p>
-                  <p className="flex-1 pt-2 text-sm text-muted-foreground">{s.desc}</p>
-                  <button onClick={() => setCustomSet(s.name)} className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-transform hover:scale-[1.02]">
-                    <MessageSquareText className="size-4" /> Request This Design
-                  </button>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+          <CustomSetsGrid onRequest={setCustomSet} />
         )}
 
         <Reveal delay={0.1}>
