@@ -6,15 +6,36 @@ import { toast } from "sonner";
 import { Eye, Mail, Save } from "lucide-react";
 import { adminApi } from "./api.ts";
 import { AdminButton, AdminCard, EmptyRow, FIELD, LABEL, Spinner, Toggle } from "./ui.tsx";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 
 type EmailTemplate = { key: string; name: string; audience: "customer" | "admin"; subject: string; html: string; enabled: boolean };
 
 const ORDER_VARS = "{{brand}} {{customer_name}} {{phone}} {{order_id}} {{product_name}} {{total}} {{courier}} {{tracking_number}}";
 const BOOKING_VARS = "{{brand}} {{name}} {{phone}} {{booking_number}} {{service}} {{date}} {{time}} {{message}}";
 
+// Full email preview in a popup, so the design can be checked without opening a new tab.
+function PreviewDialog({ open, onOpenChange, subject, html }: { open: boolean; onOpenChange: (v: boolean) => void; subject: string; html: string }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[90vh] w-full max-w-3xl flex-col gap-3 p-0 sm:max-w-3xl">
+        <div className="flex items-center justify-between border-b px-6 py-4">
+          <div>
+            <DialogTitle>Email Preview</DialogTitle>
+            <p className="pt-1 text-sm text-muted-foreground">{subject}</p>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto bg-secondary/40 p-4">
+          <iframe title="Email preview" srcDoc={html} className="h-[70vh] w-full rounded-lg border bg-white" />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TemplateEditor({ password, initial }: { password: string; initial: EmailTemplate }) {
   const [form, setForm] = useState(initial);
   const [open, setOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const vars = form.key.includes("booking") ? BOOKING_VARS : ORDER_VARS;
 
@@ -35,13 +56,6 @@ function TemplateEditor({ password, initial }: { password: string; initial: Emai
     if (await save(next)) setForm(next);
   };
 
-  const preview = () => {
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(form.html);
-    w.document.close();
-  };
-
   return (
     <AdminCard className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -54,6 +68,7 @@ function TemplateEditor({ password, initial }: { password: string; initial: Emai
         </div>
         <div className="flex items-center gap-2">
           <Toggle checked={form.enabled} onChange={(v) => void toggle(v)} label={form.enabled ? "On" : "Off"} />
+          <AdminButton variant="secondary" onClick={() => setPreviewOpen(true)}><Eye className="size-4" /> Preview</AdminButton>
           <AdminButton variant="secondary" onClick={() => setOpen(!open)}>{open ? "Close" : "Edit"}</AdminButton>
         </div>
       </div>
@@ -69,11 +84,12 @@ function TemplateEditor({ password, initial }: { password: string; initial: Emai
             <p className="pt-1 text-xs text-muted-foreground">Filled in automatically: {vars}</p>
           </div>
           <div className="flex gap-2">
-            <AdminButton variant="secondary" onClick={preview}><Eye className="size-4" /> Preview</AdminButton>
+            <AdminButton variant="secondary" onClick={() => setPreviewOpen(true)}><Eye className="size-4" /> Preview</AdminButton>
             <AdminButton onClick={() => void save(form)} disabled={saving}>{saving ? <Spinner /> : <Save className="size-4" />} Save</AdminButton>
           </div>
         </div>
       )}
+      <PreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} subject={form.subject} html={form.html} />
     </AdminCard>
   );
 }
