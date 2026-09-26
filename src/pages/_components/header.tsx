@@ -19,10 +19,7 @@ export default function Header() {
       <nav className="mx-auto flex max-w-6xl items-center justify-between rounded-full border border-border bg-card/85 px-4 py-2 text-foreground shadow-sm backdrop-blur-md">
         <a href="/" className="flex items-center gap-2.5">
           <img src={settings.logoUrl} alt={settings.brand} className="size-9 rounded-full object-cover ring-1 ring-border" />
-          <span className="font-serif text-xl font-semibold leading-none">
-            {settings.brand}
-            <span className="block text-[10px] font-sans uppercase tracking-[0.25em] text-muted-foreground">{settings.byline}</span>
-          </span>
+          <span className="font-serif text-xl font-semibold leading-none">{settings.brand}</span>
         </a>
         <ul className="hidden gap-6 text-sm lg:gap-7 md:flex">
           {NAV.map((n) => (
