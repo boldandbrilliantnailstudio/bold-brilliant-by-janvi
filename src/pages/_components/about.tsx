@@ -16,7 +16,7 @@ const DEFAULT_CARDS: WhyCard[] = [
 ];
 
 const DEFAULT_ABOUT =
-  "Bold & Brilliant by Janvi Sarang is a nail studio in Rajkot where nails become wearable art.\n\nFrom minimal elegance to intricate bridal and 3D designs, every set is thoughtfully created around your style, occasion and personality.";
+  "Bold & Brilliant is a nail studio in Rajkot where nails become wearable art.\n\nFrom minimal elegance to intricate bridal and 3D designs, every set is thoughtfully created around your style, occasion and personality.";
 
 export default function About() {
   const settings = useSiteSettings();
