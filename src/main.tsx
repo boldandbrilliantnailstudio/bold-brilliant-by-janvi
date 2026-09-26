@@ -6,20 +6,22 @@ import ShopPage from "./pages/Shop.tsx";
 import BookPage from "./pages/Book.tsx";
 import OrdersPage from "./pages/Orders.tsx";
 import ProfilePage from "./pages/Profile.tsx";
+import FounderPage from "./pages/Founder.tsx";
 import AdminPage from "./pages/admin.tsx";
 import { CartProvider } from "./hooks/use-cart.tsx";
 import { SiteSettingsProvider } from "./hooks/use-site-settings.tsx";
 import ProfileProvider from "./components/profile/profile-provider.tsx";
 
 // /admin shows a separate password-gated dashboard for the studio owner - see src/pages/admin.tsx.
-// Shop, Book, Orders and Profile each have their own standalone page (no home page sections) -
-// see src/pages/Shop.tsx, Book.tsx, Orders.tsx and Profile.tsx.
+// Shop, Book, Orders, Profile and Founder each have their own standalone page (no home page
+// sections) - see src/pages/Shop.tsx, Book.tsx, Orders.tsx, Profile.tsx and Founder.tsx.
 const path = window.location.pathname;
 const isAdmin = path.startsWith("/admin");
 const isShop = path.startsWith("/shop");
 const isBook = path.startsWith("/book");
 const isOrders = path.startsWith("/orders");
 const isProfile = path.startsWith("/profile");
+const isFounder = path.startsWith("/founder");
 
 // Browsers sometimes restore the previous scroll position on reload (or when returning from the
 // back-forward cache), dropping visitors into the middle of the page instead of the top. Force
@@ -45,6 +47,7 @@ function CurrentPage() {
   if (isBook) return <BookPage />;
   if (isOrders) return <OrdersPage />;
   if (isProfile) return <ProfilePage />;
+  if (isFounder) return <FounderPage />;
   return <Index />;
 }
 
