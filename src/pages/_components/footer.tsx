@@ -3,6 +3,13 @@ import SocialButtons from "@/components/social-buttons.tsx";
 import { useSiteSettings } from "@/hooks/use-site-settings.tsx";
 import { useSiteContent } from "@/hooks/use-site-content.ts";
 
+// Only the sections that live on the home page and aren't already in the header/bottom nav.
+const FOOTER_LINKS = [
+  { label: "About", href: "/#about" },
+  { label: "FAQ", href: "/#faq" },
+  { label: "Contact", href: "/#contact" },
+] as const;
+
 const DEFAULT_POLICIES: Record<string, { title: string; points: string[] }> = {
   privacy_policy: {
     title: "Privacy Policy",
@@ -78,7 +85,15 @@ export default function Footer() {
   return (
     <footer className="border-t bg-secondary/40 px-3 pb-24 pt-8 md:pb-8">
       <div className="mx-auto max-w-6xl">
-        <div className="flex flex-col items-center gap-6 pt-4 text-center md:flex-row md:items-start md:justify-between md:text-left">
+        <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-6 pb-8 text-sm font-medium">
+          {FOOTER_LINKS.map((n) => (
+            <a key={n.href} href={n.href} className="text-foreground transition-colors hover:text-primary">
+              {n.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="flex flex-col items-center gap-6 border-t pt-8 text-center md:flex-row md:items-start md:justify-between md:text-left">
           <div className="flex items-start gap-3">
             <img src={settings.logoUrl} alt={settings.brand} className="mt-1 size-12 shrink-0 rounded-full object-cover ring-1 ring-border" />
             <div className="text-left">
