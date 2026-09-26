@@ -94,13 +94,10 @@ export default function Footer() {
           ))}
         </nav>
 
-        <div className="flex flex-col items-center gap-6 border-t pt-8 text-center md:flex-row md:items-start md:justify-between md:text-left">
-          <div className="flex items-start gap-3">
-            <img src={settings.logoUrl} alt={settings.brand} className="mt-1 size-12 shrink-0 rounded-full object-cover ring-1 ring-border" />
-            <div className="text-left">
-              <p className="font-serif text-2xl font-semibold leading-tight">{settings.brand}</p>
-              <p className="text-sm leading-snug text-muted-foreground">Nail Art Studio, Rajkot, Gujarat 360001</p>
-            </div>
+        <div className="flex flex-col items-center gap-2 border-t pt-8 text-center md:flex-row md:items-start md:justify-between md:text-left">
+          <div>
+            <p className="font-serif text-2xl font-semibold leading-tight">{settings.brand}</p>
+            <p className="text-sm leading-snug text-muted-foreground">Nail Art Studio, Rajkot, Gujarat 360001</p>
           </div>
           <SocialButtons />
         </div>
