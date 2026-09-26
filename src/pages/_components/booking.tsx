@@ -112,7 +112,7 @@ export default function Booking() {
       <div className="absolute -right-32 top-20 h-80 w-80 rounded-full bg-primary/20 blur-[70px]" />
       <div className="absolute -left-32 bottom-10 h-80 w-80 rounded-full bg-accent/30 blur-[70px]" />
       <div className="relative mx-auto max-w-3xl">
-        <SectionHeading eyebrow="Appointments" title="Book Your Nail Appointment" sub="Fill in your details and we'll confirm your slot on WhatsApp." />
+        <SectionHeading eyebrow="Appointments" title="Book Your Nail Appointment" sub="Fill in your details and we'll confirm your slot." />
         <Reveal>
           {confirmed ? (
             <BookingSummary booking={confirmed} studioAddress={settings.address} onDone={() => setConfirmed(null)} />
