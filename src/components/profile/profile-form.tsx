@@ -1,1 +1,215 @@
-aW1wb3J0IHsgdXNlU3RhdGUsIHR5cGUgUmVhY3ROb2RlIH0gZnJvbSAicmVhY3QiOwppbXBvcnQgeyB1c2VGb3JtIH0gZnJvbSAicmVhY3QtaG9vay1mb3JtIjsKaW1wb3J0IHsgem9kUmVzb2x2ZXIgfSBmcm9tICJAaG9va2Zvcm0vcmVzb2x2ZXJzL3pvZCI7CmltcG9ydCB7IExvYWRlcjIgfSBmcm9tICJsdWNpZGUtcmVhY3QiOwppbXBvcnQgeyBJbnB1dCB9IGZyb20gIkAvY29tcG9uZW50cy91aS9pbnB1dC50c3giOwppbXBvcnQgeyBMYWJlbCB9IGZyb20gIkAvY29tcG9uZW50cy91aS9sYWJlbC50c3giOwppbXBvcnQgeyBUZXh0YXJlYSB9IGZyb20gIkAvY29tcG9uZW50cy91aS90ZXh0YXJlYS50c3giOwppbXBvcnQgeyBjbiB9IGZyb20gIkAvbGliL3V0aWxzLnRzIjsKaW1wb3J0IHsgRU1QVFlfUFJPRklMRSwgSU5ESUFOX1NUQVRFUywgcHJvZmlsZVNjaGVtYSwgdHlwZSBQcm9maWxlVmFsdWVzIH0gZnJvbSAiQC9saWIvcHJvZmlsZS50cyI7Cgp0eXBlIFBpblJlc3BvbnNlID0gQXJyYXk8eyBTdGF0dXM6IHN0cmluZzsgUG9zdE9mZmljZTogQXJyYXk8eyBEaXN0cmljdDogc3RyaW5nOyBTdGF0ZTogc3RyaW5nIH0+IHwgbnVsbCB9PjsKCmNvbnN0IEZJRUxEID0gImgtMTEgcm91bmRlZC14bCBiZy1iYWNrZ3JvdW5kLzcwIjsKY29uc3QgQURERFJFU1NfVFlQRVMgPSBbIkhvbWUiLCAiV29yayJdIGFzIGNvbnN0OwoKdHlwZSBQcm9wcyA9IHsKICBpbml0aWFsOiBQcm9maWxlVmFsdWVzIHwgbnVsbDsKICBlbWFpbDogc3RyaW5nIHwgbnVsbDsKICBzdWJtaXRMYWJlbDogc3RyaW5nOwogIG9uU3VibWl0OiAodmFsdWVzOiBQcm9maWxlVmFsdWVzKSA9PiBQcm9taXNlPHZvaWQ+OwogIG9uQ2FuY2VsPzogKCkgPT4gdm9pZDsKfTsKCmZ1bmN0aW9uIFNlY3Rpb24oeyB0aXRsZSwgY2hpbGRyZW4gfTogeyB0aXRsZTogc3RyaW5nOyBjaGlsZHJlbjogUmVhY3ROb2RlIH0pIHsKICByZXR1cm4gKAogICAgPGZpZWxkc2V0IGNsYXNzTmFtZT0iZ3JpZCBnYXAtNCByb3VuZGVkLTJ4bCBib3JkZXIgYmctY2FyZC82MCBwLTQgc206Z3JpZC1jb2xzLTIiPgogICAgICA8bGVnZW5kIGNsYXNzTmFtZT0icHgtMSB0ZXh0LXhzIGZvbnQtbWVkaXVtIHVwcGVyY2FzZSB0cmFja2luZy1bMC4yZW1dIHRleHQtcHJpbWFyeSI+e3RpdGxlfTwvbGVnZW5kPgogICAgICB7Y2hpbGRyZW59CiAgICA8L2ZpZWxkc2V0PgogICk7Cn0KCmV4cG9ydCBkZWZhdWx0IGZ1bmN0aW9uIFByb2ZpbGVGb3JtKHsgaW5pdGlhbCwgZW1haWwsIHN1Ym1pdExhYmVsLCBvblN1Ym1pdCwgb25DYW5jZWwgfTogUHJvcHMpIHsKICBjb25zdCBbc2F2aW5nLCBzZXRTYXZpbmddID0gdXNlU3RhdGUoZmFsc2UpOwogIGNvbnN0IFtwaW5Mb2FkaW5nLCBzZXRQaW5Mb2FkaW5nXSA9IHVzZVN0YXRlKGZhbHNlKTsKICBjb25zdCBbZXJyb3IsIHNldEVycm9yXSA9IHVzZVN0YXRlPHN0cmluZyB8IG51bGw+KG51bGwpOwogIGNvbnN0IHsgcmVnaXN0ZXIsIGhhbmRsZVN1Ym1pdCwgd2F0Y2gsIHNldFZhbHVlLCBmb3JtU3RhdGU6IHsgZXJyb3JzIH0gfSA9IHVzZUZvcm08UHJvZmlsZVZhbHVlcz4oewogICAgcmVzb2x2ZXI6IHpvZFJlc29sdmVyKHByb2ZpbGVTY2hlbWEpLAogICAgZGVmYXVsdFZhbHVlczogaW5pdGlhbCA/PyBFTVBUWV9QUk9GSUxFLAogIH0pOwogIGNvbnN0IGJpbGxpbmdTYW1lID0gd2F0Y2goImJpbGxpbmdTYW1lIik7CiAgY29uc3QgYWRkcmVzc1R5cGUgPSB3YXRjaCgiYWRkcmVzc1R5cGUiKTsKCiAgLy8gQXV0by1maWxsIGNpdHkgYW5kIHN0YXRlIGZyb20gdGhlIHBpbmNvZGUsIGxpa2UgYmlnIHNob3BwaW5nIGFwcHMuIFNpbGVudGx5IGlnbm9yZWQgaWYgdGhlIGxvb2t1cCBmYWlscy4KICBjb25zdCBsb29rdXBQaW5jb2RlID0gYXN5bmMgKHBpbjogc3RyaW5nKSA9PiB7CiAgICBpZiAoIS9eWzEtOV1cZHs1fSQvLnRlc3QocGluKSkgcmV0dXJuOwogICAgc2V0UGluTG9hZGluZyh0cnVlKTsKICAgIHRyeSB7CiAgICAgIGNvbnN0IHJlcyA9IGF3YWl0IGZldGNoKGBodHRwczovL2FwaS5wb3N0YWxwaW5jb2RlLmluL3BpbmNvZGUvJHtwaW59YCk7CiAgICAgIGNvbnN0IGRhdGEgPSAoYXdhaXQgcmVzLmpzb24oKSkgYXMgUGluUmVzcG9uc2U7CiAgICAgIGNvbnN0IHBvID0gZGF0YVswXT8uUG9zdE9mZmljZT8uWzBdOwogICAgICBpZiAoIXBvKSByZXR1cm47CiAgICAgIHNldFZhbHVlKCJjaXR5IiwgcG8uRGlzdHJpY3QsIHsgc2hvdWxkVmFsaWRhdGU6IHRydWUgfSk7CiAgICAgIGNvbnN0IHN0YXRlID0gSU5ESUFOX1NUQVRFUy5maW5kKChzKSA9PiBzLnRvTG93ZXJDYXNlKCkgPT09IHBvLlN0YXRlLnRvTG93ZXJDYXNlKCkpOwogICAgICBpZiAoc3RhdGUpIHNldFZhbHVlKCJzdGF0ZSIsIHN0YXRlLCB7IHNob3VsZFZhbGlkYXRlOiB0cnVlIH0pOwogICAgfSBjYXRjaCB7CiAgICAgIC8vIEN1c3RvbWVyIGNhbiBzdGlsbCB0eXBlIGNpdHkgYW5kIHN0YXRlIG1hbnVhbGx5LgogICAgfSBmaW5hbGx5IHsKICAgICAgc2V0UGluTG9hZGluZyhmYWxzZSk7CiAgICB9CiAgfTsKCiAgY29uc3Qgc3VibWl0ID0gYXN5bmMgKHZhbHVlczogUHJvZmlsZVZhbHVlcykgPT4gewogICAgc2V0RXJyb3IobnVsbCk7CiAgICBzZXRTYXZpbmcodHJ1ZSk7CiAgICB0cnkgewogICAgICBhd2FpdCBvblN1Ym1pdCh2YWx1ZXMpOwogICAgfSBjYXRjaCAoZXJyKSB7CiAgICAgIHNldEVycm9yKGVyciBpbnN0YW5jZW9mIEVycm9yID8gZXJyLm1lc3NhZ2UgOiAiQ291bGQgbm90IHNhdmUgeW91ciBkZXRhaWxzLiBQbGVhc2UgdHJ5IGFnYWluLiIpOwogICAgfSBmaW5hbGx5IHsKICAgICAgc2V0U2F2aW5nKGZhbHNlKTsKICAgIH0KICB9OwoKICBjb25zdCBlcnIgPSAoazoga2V5b2YgUHJvZmlsZVZhbHVlcykgPT4gZXJyb3JzW2tdPy5tZXNzYWdlICYmIDxwIGNsYXNzTmFtZT0icHQtMSB0ZXh0LXhzIHRleHQtZGVzdHJ1Y3RpdmUiPntlcnJvcnNba10/Lm1lc3NhZ2V9PC9wPjsKCiAgcmV0dXJuICgKICAgIDxmb3JtIG9uU3VibWl0PXtoYW5kbGVTdWJtaXQoc3VibWl0KX0gbm9WYWxpZGF0ZSBjbGFzc05hbWU9ImdyaWQgZ2FwLTUiPgogICAgICA8U2VjdGlvbiB0aXRsZT0iQ29udGFjdCBkZXRhaWxzIj4KICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ic206Y29sLXNwYW4tMiI+CiAgICAgICAgICA8TGFiZWwgaHRtbEZvcj0icGYtbmFtZSIgY2xhc3NOYW1lPSJwYi0yIj5GdWxsIE5hbWUgKjwvTGFiZWw+CiAgICAgICAgICA8SW5wdXQgaWQ9InBmLW5hbWUiIGF1dG9Db21wbGV0ZT0ibmFtZSIgcGxhY2Vob2xkZXI9IlByaXlhIFNoYWgiIGNsYXNzTmFtZT17RklFTER9IHsuLi5yZWdpc3RlcigiZnVsbE5hbWUiKX0gLz4KICAgICAgICAgIHtlcnIoImZ1bGxOYW1lIil9CiAgICAgICAgPC9kaXY+CiAgICAgICAgPGRpdj4KICAgICAgICAgIDxMYWJlbCBodG1sRm9yPSJwZi1waG9uZSIgY2xhc3NOYW1lPSJwYi0yIj5Nb2JpbGUgTnVtYmVyICo8L0xhYmVsPgogICAgICAgICAgPGRpdiBjbGFzc05hbWU9ImZsZXgiPgogICAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9ImdyaWQgcGxhY2UtaXRlbXMtY2VudGVyIHJvdW5kZWQtbC14bCBib3JkZXIgYm9yZGVyLXItMCBiZy1tdXRlZCBweC0zIHRleHQtc20gdGV4dC1tdXRlZC1mb3JlZ3JvdW5kIj4rOTE8L3NwYW4+CiAgICAgICAgICAgIDxJbnB1dCBpZD0icGYtcGhvbmUiIHR5cGU9InRlbCIgaW5wdXRNb2RlPSJudW1lcmljIiBtYXhMZW5ndGg9ezEwfSBhdXRvQ29tcGxldGU9InRlbC1uYXRpb25hbCIgcGxhY2Vob2xkZXI9Ijk4NzY1NDMyMTAiIGNsYXNzTmFtZT17Y24oRklFTEQsICJyb3VuZGVkLWwtbm9uZSIpfSB7Li4ucmVnaXN0ZXIoInBob25lIil9IC8+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIHtlcnIoInBob25lIil9CiAgICAgICAgPC9kaXY+CiAgICAgICAgPGRpdj4KICAgICAgICAgIDxMYWJlbCBodG1sRm9yPSJwZi1hbHQiIGNsYXNzTmFtZT0icGItMiI+QWx0ZXJuYXRlIE51bWJlcjwvTGFiZWw+CiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0iZmxleCI+CiAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT0iZ3JpZCBwbGFjZS1pdGVtcy1jZW50ZXIgcm91bmRlZC1sLXhsIGJvcmRlciBib3JkZXItci0wIGJnLW11dGVkIHB4LTMgdGV4dC1zbSB0ZXh0LW11dGVkLWZvcmVncm91bmQiPis5MTwvc3Bhbj4KICAgICAgICAgICAgPElucHV0IGlkPSJwZi1hbHQiIHR5cGU9InRlbCIgaW5wdXRNb2RlPSJudW1lcmljIiBtYXhMZW5ndGg9ezEwfSBwbGFjZWhvbGRlcj0iT3B0aW9uYWwiIGNsYXNzTmFtZT17Y24oRklFTEQsICJyb3VuZGVkLWwtbm9uZSIpfSB7Li4ucmVnaXN0ZXIoImFsdFBob25lIil9IC8+CiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIHtlcnIoImFsdFBob25lIil9CiAgICAgICAgPC9kaXY+CiAgICAgICAge2VtYWlsICYmICgKICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJzbTpjb2wtc3Bhbi0yIj4KICAgICAgICAgICAgPExhYmVsIGh0bWxGb3I9InBmLWVtYWlsIiBjbGFzc05hbWU9InBiLTIiPkVtYWlsPC9MYWJlbD4KICAgICAgICAgICAgPElucHV0IGlkPSJwZi1lbWFpbCIgdmFsdWU9e2VtYWlsfSByZWFkT25seSBkaXNhYmxlZCBjbGFzc05hbWU9e0ZJRUxEfSAvPgogICAgICAgICAgPC9kaXY+CiAgICAgICAgKX0KICAgICAgPC9TZWN0aW9uPgoKICAgICAgPFNlY3Rpb24gdGl0bGU9IkRlbGl2ZXJ5IGFkZHJlc3MiPgogICAgICAgIDxkaXY+CiAgICAgICAgICA8TGFiZWwgaHRtbEZvcj0icGYtcGluIiBjbGFzc05hbWU9InBiLTIiPlBpbmNvZGUgKjwvTGFiZWw+CiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0icmVsYXRpdmUiPgogICAgICAgICAgICA8SW5wdXQKICAgICAgICAgICAgICBpZD0icGYtcGluIgogICAgICAgICAgICAgIGlucHV0TW9kZT0ibnVtZXJpYyIKICAgICAgICAgICAgICBtYXhMZW5ndGg9ezZ9CiAgICAgICAgICAgICAgYXV0b0NvbXBsZXRlPSJwb3N0YWwtY29kZSIKICAgICAgICAgICAgICBwbGFjZWhvbGRlcj0iZS5nLiAxMjM0NTYiCiAgICAgICAgICAgICAgY2xhc3NOYW1lPXtGSUVMRH0KICAgICAgICAgICAgICB7Li4ucmVnaXN0ZXIoInBpbmNvZGUiLCB7IG9uQ2hhbmdlOiAoZTogUmVhY3QuQ2hhbmdlRXZlbnQ8SFRNTElucHV0RWxlbWVudD4pID0+IHZvaWQgbG9va3VwUGluY29kZShlLnRhcmdldC52YWx1ZS50cmltKCkpIH0pfQogICAgICAgICAgICAvPgogICAgICAgICAgICB7cGluTG9hZGluZyAmJiA8TG9hZGVyMiBjbGFzc05hbWU9ImFic29sdXRlIHJpZ2h0LTMgdG9wLTMuNSBzaXplLTQgYW5pbWF0ZS1zcGluIHRleHQtbXV0ZWQtZm9yZWdyb3VuZCIgLz59CiAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIHtlcnIoInBpbmNvZGUiKX0KICAgICAgICA8L2Rpdj4KICAgICAgICA8ZGl2PgogICAgICAgICAgPExhYmVsIGh0bWxGb3I9InBmLWNpdHkiIGNsYXNzTmFtZT0icGItMiI+Q2l0eSAvIERpc3RyaWN0ICo8L0xhYmVsPgogICAgICAgICAgPElucHV0IGlkPSJwZi1jaXR5IiBhdXRvQ29tcGxldGU9ImFkZHJlc3MtbGV2ZWwyIiBwbGFjZWhvbGRlcj0iZS5nLiBZb3VyIENpdHkiIGNsYXNzTmFtZT17RklFTER9IHsuLi5yZWdpc3RlcigiY2l0eSIpfSAvPgogICAgICAgICAge2VycigiY2l0eSIpfQogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXYgY2xhc3NOYW1lPSJzbTpjb2wtc3Bhbi0yIj4KICAgICAgICAgIDxMYWJlbCBodG1sRm9yPSJwZi1saW5lMSIgY2xhc3NOYW1lPSJwYi0yIj5GbGF0LCBIb3VzZSBuby4sIEJ1aWxkaW5nICo8L0xhYmVsPgogICAgICAgICAgPElucHV0IGlkPSJwZi1saW5lMSIgYXV0b0NvbXBsZXRlPSJhZGRyZXNzLWxpbmUxIiBwbGFjZWhvbGRlcj0iQi0xMiwgU2hyZWVqaSBBcGFydG1lbnQiIGNsYXNzTmFtZT17RklFTER9IHsuLi5yZWdpc3RlcigiYWRkcmVzc0xpbmUxIil9IC8+CiAgICAgICAgICB7ZXJyKCJhZGRyZXNzTGluZTEiKX0KICAgICAgICA8L2Rpdj4KICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ic206Y29sLXNwYW4tMiI+CiAgICAgICAgICA8TGFiZWwgaHRtbEZvcj0icGYtbGluZTIiIGNsYXNzTmFtZT0icGItMiI+QXJlYSwgU3RyZWV0LCBMb2NhbGl0eSAqPC9MYWJlbD4KICAgICAgICAgIDxJbnB1dCBpZD0icGYtbGluZTIiIGF1dG9Db21wbGV0ZT0iYWRkcmVzcy1saW5lMiIgcGxhY2Vob2xkZXI9IlJhaWxuYWdhciBNYWluIFJvYWQiIGNsYXNzTmFtZT17RklFTER9IHsuLi5yZWdpc3RlcigiYWRkcmVzc0xpbmUyIil9IC8+CiAgICAgICAgICB7ZXJyKCJhZGRyZXNzTGluZTIiKX0KICAgICAgICA8L2Rpdj4KICAgICAgICA8ZGl2PgogICAgICAgICAgPExhYmVsIGh0bWxGb3I9InBmLWxhbmRtYXJrIiBjbGFzc05hbWU9InBiLTIiPkxhbmRtYXJrPC9MYWJlbD4KICAgICAgICAgIDxJbnB1dCBpZD0icGYtbGFuZG1hcmsiIHBsYWNlaG9sZGVyPSJOZWFyIEFzdGhhIENob3drIiBjbGFzc05hbWU9e0ZJRUxEfSB7Li4ucmVnaXN0ZXIoImxhbmRtYXJrIil9IC8+CiAgICAgICAgICB7ZXJyKCJsYW5kbWFyayIpfQogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXY+CiAgICAgICAgICA8TGFiZWwgaHRtbEZvcj0icGYtc3RhdGUiIGNsYXNzTmFtZT0icGItMiI+U3RhdGUgKjwvTGFiZWw+CiAgICAgICAgICA8c2VsZWN0IGlkPSJwZi1zdGF0ZSIgYXV0b0NvbXBsZXRlPSJhZGRyZXNzLWxldmVsMSIgY2xhc3NOYW1lPXtjbihGSUVMRCwgInctZnVsbCBjdXJzb3ItcG9pbnRlciBib3JkZXIgYm9yZGVyLWlucHV0IHB4LTMgdGV4dC1zbSIpfSB7Li4ucmVnaXN0ZXIoInN0YXRlIil9PgogICAgICAgICAgICA8b3B0aW9uIHZhbHVlPSIiIGRpc2FibGVkPlNlbGVjdCBzdGF0ZTwvb3B0aW9uPgogICAgICAgICAgICB7SU5ESUFOX1NUQVRFUy5tYXAoKHMpID0+IDxvcHRpb24ga2V5PXtzfT57c308L29wdGlvbj4pfQogICAgICAgICAgPC9zZWxlY3Q+CiAgICAgICAgICB7ZXJyKCJzdGF0ZSIpfQogICAgICAgIDwvZGl2PgogICAgICAgIDxkaXYgY2xhc3NOYW1lPSJzbTpjb2wtc3Bhbi0yIj4KICAgICAgICAgIDxwIGNsYXNzTmFtZT0icGItMiB0ZXh0LXNtIGZvbnQtbWVkaXVtIj5BZGRyZXNzIFR5cGU8L3A+CiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0iZmxleCBnYXAtMiI+CiAgICAgICAgICAgIHtBRERSRVNTX1RZUEVTLm1hcCgodCkgPT4gKAogICAgICAgICAgICAgIDxidXR0b24KICAgICAgICAgICAgICAgIGtleT17dH0KICAgICAgICAgICAgICAgIHR5cGU9ImJ1dHRvbiIKICAgICAgICAgICAgICAgIG9uQ2xpY2s9eygpID0+IHNldFZhbHVlKCJhZGRyZXNzVHlwZSIsIHQpfQogICAgICAgICAgICAgICAgY2xhc3NOYW1lPXtjbigicm91bmRlZC1mdWxsIGJvcmRlciBweC01IHB5LTIgdGV4dC1zbSB0cmFuc2l0aW9uLWNvbG9ycyIsIGFkZHJlc3NUeXBlID09PSB0ID8gImJvcmRlci1wcmltYXJ5IGJnLXByaW1hcnkgdGV4dC1wcmltYXJ5LWZvcmVncm91bmQiIDogImJnLWJhY2tncm91bmQgaG92ZXI6Ymctc2Vjb25kYXJ5Iil9CiAgICAgICAgICAgICAgPgogICAgICAgICAgICAgICAge3R9CiAgICAgICAgICAgICAgPC9idXR0b24+CiAgICAgICAgICAgICkpfQogICAgICAgICAgPC9kaXY+CiAgICAgICAgPC9kaXY+CiAgICAgIDwvU2VjdGlvbj4KCiAgICAgIDxTZWN0aW9uIHRpdGxlPSJCaWxsaW5nIGRldGFpbHMiPgogICAgICAgIDxsYWJlbCBjbGFzc05hbWU9ImZsZXggY3Vyc29yLXBvaW50ZXIgaXRlbXMtY2VudGVyIGdhcC0zIHRleHQtc20gc206Y29sLXNwYW4tMiI+CiAgICAgICAgICA8aW5wdXQgdHlwZT0iY2hlY2tib3giIGNsYXNzTmFtZT0ic2l6ZS00IGN1cnNvci1wb2ludGVyIGFjY2VudC1wcmltYXJ5IiB7Li4ucmVnaXN0ZXIoImJpbGxpbmdTYW1lIil9IC8+CiAgICAgICAgICBCaWxsaW5nIGFkZHJlc3MgaXMgdGhlIHNhbWUgYXMgZGVsaXZlcnkgYWRkcmVzcwogICAgICAgIDwvbGFiZWw+CiAgICAgICAgeyFiaWxsaW5nU2FtZSAmJiAoCiAgICAgICAgICA8PgogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ic206Y29sLXNwYW4tMiI+CiAgICAgICAgICAgICAgPExhYmVsIGh0bWxGb3I9InBmLWJuYW1lIiBjbGFzc05hbWU9InBiLTIiPkJpbGxpbmcgTmFtZSAqPC9MYWJlbD4KICAgICAgICAgICAgICA8SW5wdXQgaWQ9InBmLWJuYW1lIiBwbGFjZWhvbGRlcj0iTmFtZSBvciBidXNpbmVzcyBuYW1lIiBjbGFzc05hbWU9e0ZJRUxEfSB7Li4ucmVnaXN0ZXIoImJpbGxpbmdOYW1lIil9IC8+CiAgICAgICAgICAgICAge2VycigiYmlsbGluZ05hbWUiKX0KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJzbTpjb2wtc3Bhbi0yIj4KICAgICAgICAgICAgICA8TGFiZWwgaHRtbEZvcj0icGYtYmFkZHIiIGNsYXNzTmFtZT0icGItMiI+QmlsbGluZyBBZGRyZXNzICo8L0xhYmVsPgogICAgICAgICAgICAgIDxUZXh0YXJlYSBpZD0icGYtYmFkZHIiIHJvd3M9ezN9IHBsYWNlaG9sZGVyPSJGdWxsIGFkZHJlc3Mgd2l0aCBjaXR5LCBzdGF0ZSBhbmQgcGluY29kZSIgY2xhc3NOYW1lPSJyb3VuZGVkLXhsIGJnLWJhY2tncm91bmQvNzAiIHsuLi5yZWdpc3RlcigiYmlsbGluZ0FkZHJlc3MiKX0gLz4KICAgICAgICAgICAgICB7ZXJyKCJiaWxsaW5nQWRkcmVzcyIpfQogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDwvPgogICAgICAgICl9CiAgICAgICAgPGRpdiBjbGFzc05hbWU9InNtOmNvbC1zcGFuLTIiPgogICAgICAgICAgPExhYmVsIGh0bWxGb3I9InBmLWdzdCIgY2xhc3NOYW1lPSJwYi0yIj5HU1RJTiAoZm9yIGJ1c2luZXNzIGludm9pY2UpPC9MYWJlbD4KICAgICAgICAgIDxJbnB1dCBpZD0icGYtZ3N0IiBtYXhMZW5ndGg9ezE1fSBwbGFjZWhvbGRlcj0iT3B0aW9uYWwiIGNsYXNzTmFtZT17Y24oRklFTEQsICJ1cHBlcmNhc2UiKX0gey4uLnJlZ2lzdGVyKCJnc3RpbiIpfSAvPgogICAgICAgICAge2VycigiZ3N0aW4iKX0KICAgICAgICA8L2Rpdj4KICAgICAgPC9TZWN0aW9uPgoKICAgICAge2Vycm9yICYmIDxwIGNsYXNzTmFtZT0idGV4dC1zbSB0ZXh0LWRlc3RydWN0aXZlIj57ZXJyb3J9PC9wPn0KCiAgICAgIDxkaXYgY2xhc3NOYW1lPSJmbGV4IGZsZXgtY29sLXJldmVyc2UgZ2FwLTIgc206ZmxleC1yb3ciPgogICAgICAgIHtvbkNhbmNlbCAmJiAoCiAgICAgICAgICA8YnV0dG9uIHR5cGU9ImJ1dHRvbiIgb25DbGljaz17b25DYW5jZWx9IGNsYXNzTmFtZT0iaW5saW5lLWZsZXggaC0xMiBmbGV4LTEgaXRlbXMtY2VudGVyIGp1c3RpZnktY2VudGVyIHJvdW5kZWQtZnVsbCBib3JkZXIgYmctc2Vjb25kYXJ5IHRleHQtc20gZm9udC1tZWRpdW0gdHJhbnNpdGlvbi1jb2xvcnMgaG92ZXI6Ymctc2Vjb25kYXJ5Lzc3MCI+CiAgICAgICAgICAgIENhbmNlbAogICAgICAgICAgPC9idXR0b24+CiAgICAgICAgKX0KICAgICAgICA8YnV0dG9uCiAgICAgICAgICB0eXBlPSJzdWJtaXQiCiAgICAgICAgICBkaXNhYmxlZD17c2F2aW5nfQogICAgICAgICAgY2xhc3NOYW1lPSJpbmxpbmUtZmxleCBoLTEyIGZsZXgtMSBpdGVtcy1jZW50ZXIganVzdGlmeS1jZW50ZXIgZ2FwLTIgcm91bmRlZC1mdWxsIGJnLXByaW1hcnkgZm9udC1tZWRpdW0gdGV4dC1wcmltYXJ5LWZvcmVncm91bmQgc2hhZG93LWxnIHNoYWRvdy1wcmltYXJ5LzMwIHRyYW5zaXRpb24tdHJhbnNmb3JtIGhvdmVyOnNjYWxlLVsxLjAyXSBkaXNhYmxlZDpvcGFjaXR5LTUwIGRpc2FibGVkOmhvdmVyOnNjYWxlLTEwMCIKICAgICAgICA+CiAgICAgICAgICB7c2F2aW5nICYmIDxMb2FkZXIyIGNsYXNzTmFtZT0ic2l6ZS00IGFuaW1hdGUtc3BpbiIgLz59IHtzdWJtaXRMYWJlbH0KICAgICAgICA8L2J1dHRvbj4KICAgICAgPC9kaXY+CiAgICA8L2Zvcm0+CiAgKTsKfQo=
+import { useState, type ReactNode } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input.tsx";
+import { Label } from "@/components/ui/label.tsx";
+import { Textarea } from "@/components/ui/textarea.tsx";
+import { cn } from "@/lib/utils.ts";
+import { EMPTY_PROFILE, INDIAN_STATES, profileSchema, type ProfileValues } from "@/lib/profile.ts";
+
+type PinResponse = Array<{ Status: string; PostOffice: Array<{ District: string; State: string }> | null }>;
+
+const FIELD = "h-11 rounded-xl bg-background/70";
+const ADDRESS_TYPES = ["Home", "Work"] as const;
+
+type Props = {
+  initial: ProfileValues | null;
+  email: string | null;
+  submitLabel: string;
+  onSubmit: (values: ProfileValues) => Promise<void>;
+  onCancel?: () => void;
+};
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <fieldset className="grid gap-4 rounded-2xl border bg-card/60 p-4 sm:grid-cols-2">
+      <legend className="px-1 text-xs font-medium uppercase tracking-[0.2em] text-primary">{title}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
+export default function ProfileForm({ initial, email, submitLabel, onSubmit, onCancel }: Props) {
+  const [saving, setSaving] = useState(false);
+  const [pinLoading, setPinLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ProfileValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: initial ?? EMPTY_PROFILE,
+  });
+  const billingSame = watch("billingSame");
+  const addressType = watch("addressType");
+
+  // Auto-fill city and state from the pincode, like big shopping apps. Silently ignored if the lookup fails.
+  const lookupPincode = async (pin: string) => {
+    if (!/^[1-9]\d{5}$/.test(pin)) return;
+    setPinLoading(true);
+    try {
+      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+      const data = (await res.json()) as PinResponse;
+      const po = data[0]?.PostOffice?.[0];
+      if (!po) return;
+      setValue("city", po.District, { shouldValidate: true });
+      const state = INDIAN_STATES.find((s) => s.toLowerCase() === po.State.toLowerCase());
+      if (state) setValue("state", state, { shouldValidate: true });
+    } catch {
+      // Customer can still type city and state manually.
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  const submit = async (values: ProfileValues) => {
+    setError(null);
+    setSaving(true);
+    try {
+      await onSubmit(values);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save your details. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const err = (k: keyof ProfileValues) => errors[k]?.message && <p className="pt-1 text-xs text-destructive">{errors[k]?.message}</p>;
+
+  return (
+    <form onSubmit={handleSubmit(submit)} noValidate className="grid gap-5">
+      <Section title="Contact details">
+        <div className="sm:col-span-2">
+          <Label htmlFor="pf-name" className="pb-2">Full Name *</Label>
+          <Input id="pf-name" autoComplete="name" placeholder="e.g. John Smith" className={FIELD} {...register("fullName")} />
+          {err("fullName")}
+        </div>
+        <div>
+          <Label htmlFor="pf-phone" className="pb-2">Mobile Number *</Label>
+          <div className="flex">
+            <span className="grid place-items-center rounded-l-xl border border-r-0 bg-muted px-3 text-sm text-muted-foreground">+91</span>
+            <Input id="pf-phone" type="tel" inputMode="numeric" maxLength={10} autoComplete="tel-national" placeholder="9876543210" className={cn(FIELD, "rounded-l-none")} {...register("phone")} />
+          </div>
+          {err("phone")}
+        </div>
+        <div>
+          <Label htmlFor="pf-alt" className="pb-2">Alternate Number</Label>
+          <div className="flex">
+            <span className="grid place-items-center rounded-l-xl border border-r-0 bg-muted px-3 text-sm text-muted-foreground">+91</span>
+            <Input id="pf-alt" type="tel" inputMode="numeric" maxLength={10} placeholder="Optional" className={cn(FIELD, "rounded-l-none")} {...register("altPhone")} />
+          </div>
+          {err("altPhone")}
+        </div>
+        {email && (
+          <div className="sm:col-span-2">
+            <Label htmlFor="pf-email" className="pb-2">Email</Label>
+            <Input id="pf-email" value={email} readOnly disabled className={FIELD} />
+          </div>
+        )}
+      </Section>
+
+      <Section title="Delivery address">
+        <div>
+          <Label htmlFor="pf-pin" className="pb-2">Pincode *</Label>
+          <div className="relative">
+            <Input
+              id="pf-pin"
+              inputMode="numeric"
+              maxLength={6}
+              autoComplete="postal-code"
+              placeholder="e.g. 123456"
+              className={FIELD}
+              {...register("pincode", { onChange: (e: React.ChangeEvent<HTMLInputElement>) => void lookupPincode(e.target.value.trim()) })}
+            />
+            {pinLoading && <Loader2 className="absolute right-3 top-3.5 size-4 animate-spin text-muted-foreground" />}
+          </div>
+          {err("pincode")}
+        </div>
+        <div>
+          <Label htmlFor="pf-city" className="pb-2">City / District *</Label>
+          <Input id="pf-city" autoComplete="address-level2" placeholder="e.g. Your City" className={FIELD} {...register("city")} />
+          {err("city")}
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="pf-line1" className="pb-2">Flat, House no., Building *</Label>
+          <Input id="pf-line1" autoComplete="address-line1" placeholder="e.g. Flat 4, Green Apartments" className={FIELD} {...register("addressLine1")} />
+          {err("addressLine1")}
+        </div>
+        <div className="sm:col-span-2">
+          <Label htmlFor="pf-line2" className="pb-2">Area, Street, Locality *</Label>
+          <Input id="pf-line2" autoComplete="address-line2" placeholder="e.g. Main Street, Sector 12" className={FIELD} {...register("addressLine2")} />
+          {err("addressLine2")}
+        </div>
+        <div>
+          <Label htmlFor="pf-landmark" className="pb-2">Landmark</Label>
+          <Input id="pf-landmark" placeholder="e.g. Near City Park" className={FIELD} {...register("landmark")} />
+          {err("landmark")}
+        </div>
+        <div>
+          <Label htmlFor="pf-state" className="pb-2">State *</Label>
+          <select id="pf-state" autoComplete="address-level1" className={cn(FIELD, "w-full cursor-pointer border border-input px-3 text-sm")} {...register("state")}>
+            <option value="" disabled>Select state</option>
+            {INDIAN_STATES.map((s) => <option key={s}>{s}</option>)}
+          </select>
+          {err("state")}
+        </div>
+        <div className="sm:col-span-2">
+          <p className="pb-2 text-sm font-medium">Address Type</p>
+          <div className="flex gap-2">
+            {ADDRESS_TYPES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setValue("addressType", t)}
+                className={cn("rounded-full border px-5 py-2 text-sm transition-colors", addressType === t ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-secondary")}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Billing details">
+        <label className="flex cursor-pointer items-center gap-3 text-sm sm:col-span-2">
+          <input type="checkbox" className="size-4 cursor-pointer accent-primary" {...register("billingSame")} />
+          Billing address is the same as delivery address
+        </label>
+        {!billingSame && (
+          <>
+            <div className="sm:col-span-2">
+              <Label htmlFor="pf-bname" className="pb-2">Billing Name *</Label>
+              <Input id="pf-bname" placeholder="Name or business name" className={FIELD} {...register("billingName")} />
+              {err("billingName")}
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="pf-baddr" className="pb-2">Billing Address *</Label>
+              <Textarea id="pf-baddr" rows={3} placeholder="Full address with city, state and pincode" className="rounded-xl bg-background/70" {...register("billingAddress")} />
+              {err("billingAddress")}
+            </div>
+          </>
+        )}
+        <div className="sm:col-span-2">
+          <Label htmlFor="pf-gst" className="pb-2">GSTIN (for business invoice)</Label>
+          <Input id="pf-gst" maxLength={15} placeholder="Optional" className={cn(FIELD, "uppercase")} {...register("gstin")} />
+          {err("gstin")}
+        </div>
+      </Section>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row">
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="inline-flex h-12 flex-1 items-center justify-center rounded-full border bg-secondary text-sm font-medium transition-colors hover:bg-secondary/70">
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={saving}
+          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-primary font-medium text-primary-foreground shadow-lg shadow-primary/30 transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
+        >
+          {saving && <Loader2 className="size-4 animate-spin" />} {submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
