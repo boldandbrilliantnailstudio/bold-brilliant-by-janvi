@@ -30,6 +30,8 @@ export type Resource =
   | "promo_banners"
   | "reviews"
   | "bookings"
+  | "services"
+  | "booking_settings"
   | "custom_requests"
   | "site_settings"
   | "site_content"
