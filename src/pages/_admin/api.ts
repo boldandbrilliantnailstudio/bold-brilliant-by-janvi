@@ -27,6 +27,7 @@ export type Resource =
   | "custom_sets"
   | "product_images"
   | "coupons"
+  | "coupon_settings"
   | "promo_banners"
   | "reviews"
   | "bookings"
