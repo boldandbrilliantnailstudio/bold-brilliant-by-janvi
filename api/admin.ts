@@ -104,7 +104,7 @@ const RESOURCES: Record<string, Resource> = {
       "poster_url", "gstin", "show_whatsapp", "show_instagram", "show_facebook", "show_youtube",
       "show_x", "show_telegram", "booking_confirm_message",
       "show_footer_email", "show_footer_whatsapp", "show_footer_phone", "show_footer_address",
-      "show_footer_maps", "show_footer_hours",
+      "show_footer_maps", "show_footer_hours", "sender_addresses",
     ],
     singleton: true,
   },
@@ -122,13 +122,14 @@ const RESOURCES: Record<string, Resource> = {
     table: "email_templates",
     order: "sort_order.asc",
     keyColumn: "key",
-    writable: ["subject", "html", "enabled"],
+    writable: ["subject", "html", "enabled", "from_address"],
   },
 };
 
 type BookingRow = {
   id: string; booking_number: number; name: string; phone: string; email: string | null;
   service: string; preferred_date: string; preferred_time: string; message: string | null; status: string;
+  coupon_code: string | null; user_id: string | null;
 };
 
 function firstHeader(req: ApiRequest, key: string): string | undefined {
@@ -163,6 +164,26 @@ async function emailBooking(env: { supabaseUrl: string; serviceKey: string }, id
   }
   await sendTemplateEmail(env, key, booking.email, bookingVars(booking));
   res.status(200).json({ ok: true });
+}
+
+// Hissa 7 fix: a personal/general coupon attached to a booking is only actually "redeemed"
+// (counted toward its one-time-per-customer limit) once the studio marks the booking
+// Completed - not the moment the booking was requested. This way a Cancelled booking never
+// burns the customer's coupon. Safe to call more than once (ignores duplicates).
+async function redeemBookingCouponIfCompleted(
+  env: { supabaseUrl: string; serviceKey: string },
+  booking: BookingRow,
+  newStatus: string,
+): Promise<void> {
+  if (newStatus !== "Completed" || !booking.coupon_code || !booking.user_id) return;
+  const couponRes = await dbFetch(env.supabaseUrl, env.serviceKey, `coupons?code=eq.${encodeURIComponent(booking.coupon_code)}&select=id`);
+  const coupon = ((await couponRes.json()) as { id: string }[])[0];
+  if (!coupon) return;
+  await dbFetch(env.supabaseUrl, env.serviceKey, "coupon_redemptions", {
+    method: "POST",
+    headers: { Prefer: "return=minimal,resolution=ignore-duplicates" },
+    body: JSON.stringify({ coupon_id: coupon.id, user_id: booking.user_id, booking_id: booking.id, discount_amount: 0 }),
+  }).catch(() => null);
 }
 
 // Ensures a product insert/update always has a unique, URL-safe slug: uses the admin-provided
@@ -303,6 +324,15 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         filter = `id=eq.${encodeURIComponent(id)}`;
         if (resourceName === "products" && "slug" in updates) await ensureUniqueProductSlug(env, updates, id);
       }
+
+      // Hissa 7 fix: read the booking's current coupon/user before updating, so we can redeem
+      // the coupon exactly once, only when the status transitions to Completed.
+      let bookingBeforeUpdate: BookingRow | null = null;
+      if (resourceName === "bookings" && typeof updates.status === "string") {
+        const beforeRes = await dbFetch(supabaseUrl, serviceKey, `bookings?${filter}&select=*`);
+        bookingBeforeUpdate = ((await beforeRes.json().catch(() => [])) as BookingRow[])[0] ?? null;
+      }
+
       const r = await dbFetch(supabaseUrl, serviceKey, `${resource.table}?${filter}`, {
         method: "PATCH",
         headers: { Prefer: "return=representation" },
@@ -318,6 +348,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         res.status(404).json({ error: "This item no longer exists. Please refresh the page." });
         return;
       }
+
+      if (bookingBeforeUpdate && typeof updates.status === "string") {
+        await redeemBookingCouponIfCompleted(env, bookingBeforeUpdate, updates.status);
+      }
+
       res.status(200).json({ row: Array.isArray(data) ? data[0] : data });
       return;
     }
