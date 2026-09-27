@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog.tsx";
 import SocialButtons from "@/components/social-buttons.tsx";
+import FooterContact from "@/components/footer-contact.tsx";
 import { useSiteSettings } from "@/hooks/use-site-settings.tsx";
 import { useSiteContent } from "@/hooks/use-site-content.ts";
 
@@ -94,12 +95,13 @@ export default function Footer() {
           ))}
         </nav>
 
-        <div className="flex flex-col items-center gap-2 border-t pt-8 text-center md:flex-row md:items-start md:justify-between md:text-left">
+        <div className="grid gap-8 border-t pt-8 text-center md:grid-cols-3 md:text-left">
           <div>
             <p className="font-serif text-2xl font-semibold leading-tight">{settings.brand}</p>
             <p className="text-sm leading-snug text-muted-foreground">Nail Art Studio, Rajkot, Gujarat 360001</p>
           </div>
-          <SocialButtons />
+          <FooterContact settings={settings} className="justify-items-center md:justify-items-start" />
+          <SocialButtons className="justify-center md:justify-end md:self-start" />
         </div>
 
         <div className="mx-auto mt-8 flex max-w-6xl flex-col items-center gap-3 border-t pt-8 text-center text-xs text-muted-foreground">
