@@ -1,8 +1,7 @@
 // Full product page - its own URL (/shop/<slug>), shareable on WhatsApp etc. (see api/shop-meta.ts
 // for the link preview). Big swipeable + zoomable photo gallery up top, full description in the
 // middle, and this product's own reviews at the bottom (separate from the homepage Testimonials).
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { ShoppingBasket, Star, X, ZoomIn } from "lucide-react";
 import { toast } from "sonner";
 import Header from "./_components/header.tsx";
@@ -15,14 +14,12 @@ import WriteProductReviewDialog from "./_components/write-product-review-dialog.
 import Carousel from "@/components/carousel.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
-import { ErrorState, ErrorStateContent, ErrorStateDescription, ErrorStateHeader, ErrorStateMedia, ErrorStateTitle } from "@/components/ui/error-state.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import { useProductBySlug } from "@/hooks/use-product-by-slug.ts";
 import { useProductReviews } from "@/hooks/use-product-reviews.ts";
 import { useCart } from "@/hooks/use-cart.tsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth.ts";
 import { useProfile } from "@/hooks/use-profile.ts";
-import { useEffect } from "react";
 import { supabase } from "@/lib/supabase.ts";
 import type { Product } from "@/hooks/use-products.ts";
 import type { CheckoutOrder } from "@/lib/catalog.ts";
@@ -80,6 +77,25 @@ function Gallery({ images, name }: { images: string[]; name: string }) {
       </div>
       {zoomIndex !== null && <ZoomDialog images={shown} index={zoomIndex} onClose={() => setZoomIndex(null)} />}
     </>
+  );
+}
+
+// Small average-rating line shown right under the product title, above the price.
+function ProductRatingSummary({ productId }: { productId: string }) {
+  const reviews = useProductReviews(productId);
+  if (!reviews || reviews.length === 0) return null;
+  const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  return (
+    <div className="flex items-center gap-1.5 pt-2">
+      <div className="flex gap-0.5 text-primary">
+        {Array.from({ length: 5 }).map((_, j) => (
+          <Star key={j} className="size-4" fill={j < Math.round(avg) ? "currentColor" : "none"} />
+        ))}
+      </div>
+      <span className="text-sm text-muted-foreground">
+        {avg.toFixed(1)} ({reviews.length} review{reviews.length === 1 ? "" : "s"})
+      </span>
+    </div>
   );
 }
 
@@ -226,20 +242,20 @@ export default function ProductPage({ slug }: { slug: string }) {
               </div>
             </div>
           ) : product === null ? (
-            <ErrorState>
-              <ErrorStateHeader>
-                <ErrorStateMedia variant="icon">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
                   <ShoppingBasket />
-                </ErrorStateMedia>
-                <ErrorStateTitle>Product not found</ErrorStateTitle>
-                <ErrorStateDescription>This nail set may have been removed or is no longer available.</ErrorStateDescription>
-              </ErrorStateHeader>
-              <ErrorStateContent>
-                <Link to="/shop" className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground">
+                </EmptyMedia>
+                <EmptyTitle>Product not found</EmptyTitle>
+                <EmptyDescription>This nail set may have been removed or is no longer available.</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <a href="/shop" className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground">
                   Back to Shop
-                </Link>
-              </ErrorStateContent>
-            </ErrorState>
+                </a>
+              </EmptyContent>
+            </Empty>
           ) : (
             <div className="space-y-10">
               <div className="grid gap-8 md:grid-cols-2 md:gap-10">
@@ -320,24 +336,5 @@ export default function ProductPage({ slug }: { slug: string }) {
 
       {checkout && <CheckoutDialog order={checkout} onClose={() => setCheckout(null)} />}
     </>
-  );
-}
-
-// Small average-rating line shown right under the product title, above the price.
-function ProductRatingSummary({ productId }: { productId: string }) {
-  const reviews = useProductReviews(productId);
-  if (!reviews || reviews.length === 0) return null;
-  const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-  return (
-    <div className="flex items-center gap-1.5 pt-2">
-      <div className="flex gap-0.5 text-primary">
-        {Array.from({ length: 5 }).map((_, j) => (
-          <Star key={j} className="size-4" fill={j < Math.round(avg) ? "currentColor" : "none"} />
-        ))}
-      </div>
-      <span className="text-sm text-muted-foreground">
-        {avg.toFixed(1)} ({reviews.length} review{reviews.length === 1 ? "" : "s"})
-      </span>
-    </div>
   );
 }
