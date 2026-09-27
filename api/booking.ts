@@ -1,7 +1,8 @@
-// Public endpoint for the website booking form. Saves the request (via the create_booking
-// database function, server-only) and emails the studio owner about the new booking.
+// Public endpoint for the website booking form. The customer must be signed in (same login as
+// the shop). Saves the request (via the create_booking database function, server-only), links
+// it to the customer's account and emails the studio owner.
 // Env vars (Vercel): SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, RESEND_API_KEY (optional).
-import { dbFetch, getEnv, type ApiRequest, type ApiResponse } from "./_lib/db.js";
+import { dbFetch, getEnv, getUserId, type ApiRequest, type ApiResponse } from "./_lib/db.js";
 import { bookingVars, sendTemplateEmail } from "./_lib/email.js";
 
 type Body = {
@@ -28,6 +29,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const env = getEnv();
   if (!env) {
     res.status(500).json({ error: "Booking is not available right now." });
+    return;
+  }
+  const userId = await getUserId(req, env.supabaseUrl, env.serviceKey);
+  if (!userId) {
+    res.status(401).json({ error: "Please sign in to book an appointment." });
     return;
   }
 
@@ -75,6 +81,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       res.status(400).json({ error: "Could not send your booking request. Please try again." });
       return;
     }
+    // Link the booking to the signed-in customer (used later for reviews and profiles).
+    await dbFetch(env.supabaseUrl, env.serviceKey, `bookings?booking_number=eq.${bookingNumber}`, {
+      method: "PATCH",
+      body: JSON.stringify({ user_id: userId }),
+    });
     await sendTemplateEmail(env, "admin_new_booking", null, bookingVars({
       booking_number: bookingNumber, name, phone, service: b.service, preferred_date: b.date, preferred_time: b.time, message,
     }));
