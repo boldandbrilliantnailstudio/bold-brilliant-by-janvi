@@ -1,11 +1,13 @@
-// Customer profiles admin tab (Hissa 6): search customers, see their spend/order/booking/review
-// history at a glance, and open a detail view with private admin notes, tags, a "Send Coupon"
-// action (Hissa 7), and a "Send Message" action for ad-hoc email/WhatsApp using the template
-// library from Admin > Message Templates (Hissa 8). Backed by api/admin-customers.ts and
-// api/admin-send-message.ts (separate from the generic adminApi since they aggregate/reach out).
+// Customer profiles admin tab (Hissa 6): search customers by name/phone/email, see their
+// spend/order/booking/review history at a glance, and open a detail view with their address,
+// private admin notes, tags, review photos, coupons issued/used, a "Send Coupon" action
+// (Hissa 7, with an optional start date), and a "Send Message" action for ad-hoc email/WhatsApp
+// using the template library from Admin > Message Templates (Hissa 8, with a sender address
+// picker). Backed by api/admin-customers.ts and api/admin-send-message.ts (separate from the
+// generic adminApi since they aggregate/reach out).
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Mail, MessageCircle, Search, Send, Star, Tag, User, X } from "lucide-react";
+import { Camera, Mail, MapPin, MessageCircle, Search, Send, Star, Tag, Ticket, User, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 import { adminApi } from "./api.ts";
 import { AdminButton, AdminCard, EmptyRow, FIELD, LABEL, Spinner } from "./ui.tsx";
@@ -25,22 +27,60 @@ type CustomerSummary = {
   reviewCount: number;
 };
 
+type CustomerCoupon = {
+  id: string;
+  code: string;
+  discount_type: "percent" | "flat";
+  discount_value: number;
+  scope: "shop" | "booking" | "both";
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+  used: boolean;
+};
+
 type CustomerDetail = {
-  profile: { id: string; customer_number: number; full_name: string; phone: string; city: string; state: string; admin_notes: string | null; tags: string[] };
+  profile: {
+    id: string;
+    customer_number: number;
+    full_name: string;
+    phone: string;
+    pincode: string;
+    address_line1: string;
+    address_line2: string;
+    landmark: string | null;
+    city: string;
+    state: string;
+    admin_notes: string | null;
+    tags: string[];
+    marketing_opt_out: boolean;
+  };
   email: string | null;
   orders: { id: string; product_name: string; amount: number; status: string; created_at: string }[];
   bookings: { id: string; service: string; status: string; preferred_date: string }[];
-  reviews: { id: string; rating: number; body: string; created_at: string }[];
+  reviews: { id: string; rating: number; body: string; photo_urls: string[] | null; created_at: string }[];
+  coupons: CustomerCoupon[];
 };
 
 type CouponSettings = { default_discount_type: "percent" | "flat"; default_discount_value: number; default_scope: "shop" | "booking" | "both"; default_validity_days: number };
 type MessageTemplate = { id: string; channel: "email" | "whatsapp"; name: string; subject: string | null; body: string };
+type SenderAddress = { label: string; email: string };
+type SiteSettingsRow = { sender_addresses?: SenderAddress[] };
 
 const SUGGESTED_TAGS = ["VIP", "Regular", "New", "At Risk"];
 
 function randomCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+// IST is UTC+5:30 with no DST - a fixed offset conversion is always correct.
+const IST_OFFSET_MIN = 330;
+function istInputToUtcIso(dateStr: string, timeStr: string): string | null {
+  if (!dateStr || !timeStr) return null;
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const [h, min] = timeStr.split(":").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, h, min) - IST_OFFSET_MIN * 60 * 1000).toISOString();
 }
 
 // Fills {{name}}, {{coupon}} and any other placeholder into a subject/body for previewing and
@@ -96,7 +136,7 @@ export default function CustomersTab({ password }: { password: string }) {
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <input className={`${FIELD} pl-9`} placeholder="Search by name or phone..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input className={`${FIELD} pl-9`} placeholder="Search by name, phone or email..." value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
       {customers === null ? (
@@ -157,12 +197,16 @@ export default function CustomersTab({ password }: { password: string }) {
   );
 }
 
+// Hissa 7 fix: personal coupons can now start on a specific future date/time, not just expire -
+// matches the general Coupon form in Admin > Coupons.
 function SendCouponDialog({ password, customerId, customerName, onClose }: { password: string; customerId: string; customerName: string; onClose: () => void }) {
   const [settings, setSettings] = useState<CouponSettings | null>(null);
   const [code, setCode] = useState(randomCode());
   const [discountType, setDiscountType] = useState<"percent" | "flat">("percent");
   const [discountValue, setDiscountValue] = useState("10");
   const [scope, setScope] = useState<"shop" | "booking" | "both">("both");
+  const [startsDate, setStartsDate] = useState("");
+  const [startsTime, setStartsTime] = useState("");
   const [validityDays, setValidityDays] = useState("7");
   const [saving, setSaving] = useState(false);
 
@@ -184,6 +228,13 @@ function SendCouponDialog({ password, customerId, customerName, onClose }: { pas
       toast.error("Please enter a valid discount value.");
       return;
     }
+    if (startsDate && startsTime && validityDays) {
+      const startsAt = istInputToUtcIso(startsDate, startsTime);
+      if (startsAt && new Date(startsAt).getTime() > Date.now() + Number(validityDays) * 24 * 60 * 60 * 1000) {
+        toast.error("The start date is after the expiry date. Please check the dates.");
+        return;
+      }
+    }
     setSaving(true);
     const expiresAt = new Date(Date.now() + Number(validityDays || settings?.default_validity_days || 7) * 24 * 60 * 60 * 1000).toISOString();
     const { ok, data } = await adminApi.create(password, "coupons", {
@@ -192,6 +243,7 @@ function SendCouponDialog({ password, customerId, customerName, onClose }: { pas
       discount_value: value,
       min_order_amount: 0,
       per_user_limit: 1,
+      starts_at: istInputToUtcIso(startsDate, startsTime),
       expires_at: expiresAt,
       is_active: true,
       user_id: customerId,
@@ -241,7 +293,15 @@ function SendCouponDialog({ password, customerId, customerName, onClose }: { pas
             </select>
           </div>
           <div>
-            <label className={LABEL}>Valid for (days)</label>
+            <label className={LABEL}>Starts on (optional, India time)</label>
+            <div className="flex gap-2">
+              <input type="date" className={FIELD} value={startsDate} onChange={(e) => setStartsDate(e.target.value)} />
+              <input type="time" className={FIELD} value={startsTime} onChange={(e) => setStartsTime(e.target.value)} />
+            </div>
+            <p className="pt-1 text-xs text-muted-foreground">Leave blank to make it active immediately.</p>
+          </div>
+          <div>
+            <label className={LABEL}>Valid for (days from creation)</label>
             <input type="number" min="1" className={FIELD} value={validityDays} onChange={(e) => setValidityDays(e.target.value)} />
           </div>
           <div className="flex gap-2">
@@ -257,15 +317,18 @@ function SendCouponDialog({ password, customerId, customerName, onClose }: { pas
 }
 
 // Send Message dialog (Hissa 8): pick an email or WhatsApp template (or write from scratch),
-// fill in {{name}}/{{coupon}}, preview, then send the email directly or open WhatsApp with the
-// message pre-filled (WhatsApp has no server-side send API without a paid business account, so
-// this opens wa.me with the text ready to go, and logs it for the customer's history).
+// fill in {{name}}/{{coupon}}, pick a verified sender address, preview, then send the email
+// directly or open WhatsApp with the message pre-filled (WhatsApp has no server-side send API
+// without a paid business account, so this opens wa.me with the text ready to go, and logs it
+// for the customer's history). An unsubscribed customer's email send is blocked server-side.
 function SendMessageDialog({
   password,
   customerId,
   customerName,
   customerPhone,
   customerEmail,
+  marketingOptOut,
+  senderAddresses,
   onClose,
 }: {
   password: string;
@@ -273,6 +336,8 @@ function SendMessageDialog({
   customerName: string;
   customerPhone: string;
   customerEmail: string | null;
+  marketingOptOut: boolean;
+  senderAddresses: SenderAddress[];
   onClose: () => void;
 }) {
   const [channel, setChannel] = useState<"email" | "whatsapp">(customerEmail ? "email" : "whatsapp");
@@ -281,6 +346,7 @@ function SendMessageDialog({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [coupon, setCoupon] = useState("");
+  const [fromAddress, setFromAddress] = useState<string>(senderAddresses[0]?.email ?? "");
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -308,6 +374,10 @@ function SendMessageDialog({
       toast.error("This customer has no email on file.");
       return;
     }
+    if (marketingOptOut) {
+      toast.error("This customer has unsubscribed from promotional emails.");
+      return;
+    }
     if (!filledSubject.trim() || !filledBody.trim()) {
       toast.error("Please fill in the subject and message.");
       return;
@@ -315,7 +385,7 @@ function SendMessageDialog({
     setSending(true);
     const { ok, data } = await callSendMessage<{ error?: string }>(password, "?action=send-email", {
       method: "POST",
-      body: JSON.stringify({ userId: customerId, subject: filledSubject, html: filledBody }),
+      body: JSON.stringify({ userId: customerId, subject: filledSubject, html: filledBody, fromAddress: fromAddress || null }),
     });
     setSending(false);
     if (!ok) {
@@ -359,6 +429,12 @@ function SendMessageDialog({
             </button>
           </div>
 
+          {channel === "email" && marketingOptOut && (
+            <p className="rounded-xl border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+              This customer has unsubscribed from promotional emails. Sending here is blocked.
+            </p>
+          )}
+
           <div>
             <label className={LABEL}>Template</label>
             <select className={FIELD} value={templateId} onChange={(e) => applyTemplate(e.target.value)}>
@@ -368,6 +444,17 @@ function SendMessageDialog({
               ))}
             </select>
           </div>
+
+          {channel === "email" && senderAddresses.length > 0 && (
+            <div>
+              <label className={LABEL}>Send from</label>
+              <select className={FIELD} value={fromAddress} onChange={(e) => setFromAddress(e.target.value)}>
+                {senderAddresses.map((a) => (
+                  <option key={a.email} value={a.email}>{a.label} ({a.email})</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className={LABEL}>Coupon code to insert (optional, fills {"{{coupon}}"})</label>
@@ -398,7 +485,7 @@ function SendMessageDialog({
           <div className="flex gap-2">
             <AdminButton variant="secondary" onClick={onClose} className="flex-1">Cancel</AdminButton>
             {channel === "email" ? (
-              <AdminButton onClick={() => void sendEmail()} disabled={sending || !customerEmail} className="flex-1">
+              <AdminButton onClick={() => void sendEmail()} disabled={sending || !customerEmail || marketingOptOut} className="flex-1">
                 {sending && <Spinner />} <Mail className="size-3.5" /> Send Email
               </AdminButton>
             ) : (
@@ -421,6 +508,7 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
   const [saving, setSaving] = useState(false);
   const [sendingCoupon, setSendingCoupon] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [senderAddresses, setSenderAddresses] = useState<SenderAddress[]>([]);
 
   useEffect(() => {
     void callCustomers<{ customer?: CustomerDetail; error?: string }>(password, `?id=${encodeURIComponent(id)}`).then(({ ok, data }) => {
@@ -431,6 +519,9 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
       } else {
         toast.error(data.error ?? "Could not load customer");
       }
+    });
+    void adminApi.list<SiteSettingsRow>(password, "site_settings").then(({ ok, data }) => {
+      if (ok) setSenderAddresses((data as unknown as { row?: SiteSettingsRow }).row?.sender_addresses ?? []);
     });
   }, [password, id]);
 
@@ -466,7 +557,9 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
                 <p className="font-medium">{detail.profile.full_name}</p>
                 <p className="text-sm text-muted-foreground">#{String(detail.profile.customer_number).padStart(6, "0")} · {detail.profile.phone}</p>
                 {detail.email && <p className="text-sm text-muted-foreground">{detail.email}</p>}
-                <p className="text-sm text-muted-foreground">{detail.profile.city}, {detail.profile.state}</p>
+                {detail.profile.marketing_opt_out && (
+                  <p className="pt-1 text-xs font-medium text-destructive">Unsubscribed from promotional emails</p>
+                )}
               </div>
               <div className="flex shrink-0 flex-col gap-2">
                 <AdminButton variant="secondary" onClick={() => setSendingMessage(true)}>
@@ -476,6 +569,18 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
                   <Send className="size-3.5" /> Send Coupon
                 </AdminButton>
               </div>
+            </div>
+
+            <div className="rounded-xl border p-3">
+              <p className={LABEL}>
+                <MapPin className="mr-1 inline size-3.5" /> Delivery Address
+              </p>
+              <p className="text-sm">
+                {detail.profile.address_line1}
+                {detail.profile.address_line2 ? `, ${detail.profile.address_line2}` : ""}
+                {detail.profile.landmark ? ` (near ${detail.profile.landmark})` : ""}
+              </p>
+              <p className="text-sm text-muted-foreground">{detail.profile.city}, {detail.profile.state} - {detail.profile.pincode}</p>
             </div>
 
             <div>
@@ -540,6 +645,27 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
             </div>
 
             <div>
+              <p className={LABEL}>
+                <Ticket className="mr-1 inline size-3.5" /> Coupons ({detail.coupons.length})
+              </p>
+              {detail.coupons.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No coupons sent yet.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {detail.coupons.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between rounded-lg border p-2 text-sm">
+                      <span className="font-mono">{c.code}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {c.discount_type === "percent" ? `${c.discount_value}% off` : `₹${c.discount_value} off`} ·{" "}
+                        {c.used ? "Used" : c.is_active ? "Not used yet" : "Inactive"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
               <p className={LABEL}>Reviews ({detail.reviews.length})</p>
               {detail.reviews.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No reviews yet.</p>
@@ -553,6 +679,15 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
                         ))}
                       </div>
                       <p className="pt-1 text-muted-foreground">{r.body}</p>
+                      {r.photo_urls && r.photo_urls.length > 0 && (
+                        <div className="flex gap-1.5 pt-2">
+                          {r.photo_urls.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noreferrer">
+                              <img src={url} alt="Review photo" className="size-12 rounded-lg object-cover" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -578,6 +713,8 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
             customerName={detail.profile.full_name}
             customerPhone={detail.profile.phone}
             customerEmail={detail.email}
+            marketingOptOut={detail.profile.marketing_opt_out}
+            senderAddresses={senderAddresses}
             onClose={() => setSendingMessage(false)}
           />
         )}
