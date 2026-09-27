@@ -22,6 +22,8 @@ type CouponRow = {
   starts_at: string | null;
   expires_at: string | null;
   is_active: boolean;
+  user_id: string | null;
+  scope: "shop" | "booking" | "both";
 };
 
 function parseItems(value: unknown): Item[] | null {
@@ -49,13 +51,19 @@ async function findCoupon(
   const coupon = rows[0];
   if (!coupon || !coupon.is_active) return { coupon: null, error: "That coupon code isn't valid." };
 
+  // Personal coupons (user_id set) only work for the customer they were issued to.
+  if (coupon.user_id && coupon.user_id !== userId) return { coupon: null, error: "That coupon code isn't valid." };
+  if (coupon.scope === "booking") return { coupon: null, error: "That coupon can only be used for bookings, not shop orders." };
+
   const now = Date.now();
   if (coupon.starts_at && new Date(coupon.starts_at).getTime() > now) return { coupon: null, error: "That coupon isn't active yet." };
   if (coupon.expires_at && new Date(coupon.expires_at).getTime() < now) return { coupon: null, error: "That coupon has expired." };
   if (subtotal < coupon.min_order_amount) return { coupon: null, error: `Add ₹${coupon.min_order_amount - subtotal} more to use this coupon.` };
   if (coupon.usage_limit !== null && coupon.used_count >= coupon.usage_limit) return { coupon: null, error: "That coupon has reached its usage limit." };
 
-  if (coupon.per_user_limit !== null) {
+  // Personal coupons are always one-time-per-customer, regardless of per_user_limit.
+  const effectiveLimit = coupon.user_id ? 1 : coupon.per_user_limit;
+  if (effectiveLimit !== null) {
     const usedRes = await dbFetch(
       supabaseUrl,
       serviceKey,
@@ -63,7 +71,7 @@ async function findCoupon(
       { headers: { Prefer: "count=exact", Range: "0-0" } },
     );
     const usedByUser = parseInt(usedRes.headers.get("content-range")?.split("/")[1] ?? "0", 10) || 0;
-    if (usedByUser >= coupon.per_user_limit) return { coupon: null, error: "You've already used this coupon the maximum number of times." };
+    if (usedByUser >= effectiveLimit) return { coupon: null, error: "You've already used this coupon the maximum number of times." };
   }
 
   return { coupon, error: null };
