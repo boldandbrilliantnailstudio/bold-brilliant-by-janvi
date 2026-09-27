@@ -4,8 +4,11 @@
 // The service must be an active service from Admin > Services, and the time must be a free
 // slot from Admin > Booking Settings. A coupon code (general or a personal one issued to this
 // customer, scope "booking" or "both") can be attached - the discount is shown as a note for
-// the studio to apply manually, since bookings don't take online payment. Env vars:
-// SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, RESEND_API_KEY (optional).
+// the studio to apply manually, since bookings don't take online payment. The coupon is only
+// actually marked "used" (a coupon_redemptions row inserted) once the studio marks this booking
+// Completed (see api/admin.ts) - not here at creation time - so a Cancelled booking never burns
+// the customer's one-time coupon. Env vars: SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL,
+// RESEND_API_KEY (optional).
 import { dbFetch, getEnv, getUserId, q, type ApiRequest, type ApiResponse } from "./_lib/db.js";
 import { bookingVars, sendTemplateEmail } from "./_lib/email.js";
 import { freeSlots, loadSettings } from "./_lib/slots.js";
@@ -42,6 +45,8 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 // Validates a coupon for use on a booking: must exist, be active, in scope, in date range, and
 // - if personal - belong to this customer. Bookings have no price to discount from server-side
 // (studio sets prices per-service), so this just returns a human note for the studio to see.
+// Does NOT insert a coupon_redemptions row - that only happens once the booking is marked
+// Completed (api/admin.ts), so a coupon isn't burned by a booking that's later cancelled.
 async function resolveBookingCoupon(
   env: { supabaseUrl: string; serviceKey: string },
   code: string,
@@ -176,25 +181,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return;
     }
     // Link the booking to the signed-in customer (used later for reviews and profiles), and
-    // attach the coupon note if one was applied.
-    const bookingPatchRes = await dbFetch(env.supabaseUrl, env.serviceKey, `bookings?booking_number=eq.${bookingNumber}&select=id`, {
+    // attach the coupon note if one was applied. The coupon itself is only redeemed (counted as
+    // used) once the studio marks this booking Completed - see redeemBookingCouponIfCompleted
+    // in api/admin.ts - so a Cancelled booking never burns the customer's one-time coupon.
+    await dbFetch(env.supabaseUrl, env.serviceKey, `bookings?booking_number=eq.${bookingNumber}`, {
       method: "PATCH",
-      headers: { Prefer: "return=representation" },
+      headers: { Prefer: "return=minimal" },
       body: JSON.stringify({ user_id: userId, coupon_code: couponCode, discount_note: discountNote }),
     });
-    const updatedBooking = ((await bookingPatchRes.json().catch(() => [])) as { id: string }[])[0];
-
-    if (couponCode && updatedBooking) {
-      const couponRes = await dbFetch(env.supabaseUrl, env.serviceKey, `coupons?code=eq.${encodeURIComponent(couponCode)}&select=id`);
-      const coupon = ((await couponRes.json()) as { id: string }[])[0];
-      if (coupon) {
-        await dbFetch(env.supabaseUrl, env.serviceKey, "coupon_redemptions", {
-          method: "POST",
-          headers: { Prefer: "return=minimal,resolution=ignore-duplicates" },
-          body: JSON.stringify({ coupon_id: coupon.id, user_id: userId, booking_id: updatedBooking.id, discount_amount: 0 }),
-        }).catch(() => null);
-      }
-    }
 
     await sendTemplateEmail(env, "admin_new_booking", null, bookingVars({
       booking_number: bookingNumber, name, phone, service: b.service, preferred_date: b.date, preferred_time: time, message,
