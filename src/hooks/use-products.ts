@@ -7,6 +7,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabase.ts";
 
 export type Product = {
   id: string;
+  slug: string;
   name: string;
   description: string | null;
   price: number;
@@ -15,10 +16,14 @@ export type Product = {
   images: string[];
   stock: number | null;
   soldOut: boolean;
+  category: string | null;
+  ingredients: string | null;
+  sizeInfo: string | null;
 };
 
 type Row = {
   id: string;
+  slug: string;
   name: string;
   description: string | null;
   price: number;
@@ -26,6 +31,9 @@ type Row = {
   image_url: string | null;
   stock: number | null;
   sold_out: boolean;
+  category: string | null;
+  ingredients: string | null;
+  size_info: string | null;
 };
 
 type ImageRow = { product_id: string; image_url: string };
@@ -49,6 +57,7 @@ export function useProducts() {
           const extra = imageRows.filter((img) => img.product_id === r.id).map((img) => img.image_url);
           return {
             id: r.id,
+            slug: r.slug,
             name: r.name,
             description: r.description,
             price: r.price,
@@ -57,6 +66,9 @@ export function useProducts() {
             images: [r.image_url, ...extra].filter((url): url is string => !!url),
             stock: r.stock,
             soldOut: r.sold_out,
+            category: r.category,
+            ingredients: r.ingredients,
+            sizeInfo: r.size_info,
           };
         }),
       );
