@@ -1,23 +1,7 @@
-// Single admin endpoint for every simple content table: Shop products, Custom sets, Coupons,
-// Coupon banners, Reviews, Bookings, Services, Booking settings, Custom set requests, Site
-// settings (contacts/hours/social toggles/booking message), Site content (policy pages), the
-// Invoice template and Email templates.
-// Protected by the shared admin password. Env vars (Vercel): ADMIN_PASSWORD,
-// SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, RESEND_API_KEY (for booking emails),
-// TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (custom request alerts).
-//
-// Usage from the admin panel:
-//   GET    /api/admin?resource=products                 -> list all rows
-//   POST   /api/admin?resource=products                  body: fields to insert
-//   PATCH  /api/admin?resource=products                  body: { id, ...fields to update }
-//   DELETE /api/admin?resource=products&id=<uuid>
-//   POST   /api/admin?resource=bookings&action=email     body: { id } -> emails the customer
-//   POST   /api/admin?resource=custom_requests&action=telegram-setup -> connects the Telegram bot
-// Singleton resources (site_settings, invoice_template, booking_settings) always target row 1.
-// site_content and email_templates are keyed by `key` instead of `id`.
 import { checkAdminPassword, dbFetch, getEnv, q, rejectWrongPassword, type ApiRequest, type ApiResponse } from "./_lib/db.js";
 import { bookingVars, sendTemplateEmail } from "./_lib/email.js";
 import { connectTelegram } from "./_lib/telegram.js";
+import { slugify } from "../src/lib/slug.js";
 
 type Resource = {
   table: string;
@@ -34,7 +18,10 @@ const RESOURCES: Record<string, Resource> = {
   products: {
     table: "products",
     order: "sort_order.asc",
-    writable: ["name", "description", "price", "compare_at_price", "image_url", "stock", "sold_out", "is_active", "sort_order"],
+    writable: [
+      "name", "slug", "description", "price", "compare_at_price", "image_url", "stock",
+      "sold_out", "is_active", "sort_order", "category", "ingredients", "size_info",
+    ],
     allowInsert: true,
     allowDelete: true,
   },
@@ -173,6 +160,31 @@ async function emailBooking(env: { supabaseUrl: string; serviceKey: string }, id
   res.status(200).json({ ok: true });
 }
 
+// Ensures a product insert/update always has a unique, URL-safe slug: uses the admin-provided
+// slug (or derives one from the name), then appends "-2", "-3"... if it collides with another
+// product's slug so every product keeps its own /shop/<slug> page.
+async function ensureUniqueProductSlug(
+  env: { supabaseUrl: string; serviceKey: string },
+  body: Record<string, unknown>,
+  currentId: string | null,
+): Promise<void> {
+  const nameOrSlug = typeof body.slug === "string" && body.slug.trim() ? body.slug : typeof body.name === "string" ? body.name : "";
+  const base = slugify(nameOrSlug) || "product";
+  let candidate = base;
+  let suffix = 2;
+  for (;;) {
+    const filter = currentId
+      ? `slug=eq.${encodeURIComponent(candidate)}&id=neq.${encodeURIComponent(currentId)}`
+      : `slug=eq.${encodeURIComponent(candidate)}`;
+    const r = await dbFetch(env.supabaseUrl, env.serviceKey, `products?${filter}&select=id`);
+    const rows = (await r.json().catch(() => [])) as unknown[];
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  body.slug = candidate;
+}
+
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   const resourceName = q(req, "resource");
   const resource = resourceName ? RESOURCES[resourceName] : undefined;
@@ -230,6 +242,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return;
       }
       const body = pickWritable(req.body, resource.writable);
+      if (resourceName === "products") await ensureUniqueProductSlug(env, body, null);
       const r = await dbFetch(supabaseUrl, serviceKey, resource.table, {
         method: "POST",
         headers: { Prefer: "return=representation" },
@@ -283,6 +296,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
           return;
         }
         filter = `id=eq.${encodeURIComponent(id)}`;
+        if (resourceName === "products" && "slug" in updates) await ensureUniqueProductSlug(env, updates, id);
       }
       const r = await dbFetch(supabaseUrl, serviceKey, `${resource.table}?${filter}`, {
         method: "PATCH",
