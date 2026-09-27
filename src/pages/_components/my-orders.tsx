@@ -2,7 +2,7 @@
 // them download their invoice once the order is dispatched. Reads orders directly from Supabase
 // (RLS-protected), then fetches live tracking from /api/track-shipment by order id.
 import { useEffect, useState } from "react";
-import { Download, LogIn, PackageSearch, Truck } from "lucide-react";
+import { Download, LogIn, PackageSearch, Star, Truck } from "lucide-react";
 import { toast } from "sonner";
 import Reveal, { SectionHeading } from "@/components/reveal.tsx";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
@@ -11,6 +11,7 @@ import { useCustomerAuth } from "@/hooks/use-customer-auth.ts";
 import { useProfile } from "@/hooks/use-profile.ts";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase.ts";
 import ShipmentJourney from "./shipment-journey.tsx";
+import WriteReviewDialog from "./write-review-dialog.tsx";
 
 type Order = {
   id: string;
@@ -22,14 +23,19 @@ type Order = {
   created_at: string;
 };
 
+type ReviewStatus = { orderId: string; isPublished: boolean };
+
 export default function MyOrders() {
   const { user, isSignedIn, loading } = useCustomerAuth();
-  const { openProfile } = useProfile();
+  const { profile, openProfile } = useProfile();
   const [orders, setOrders] = useState<Order[] | null>(null);
+  const [reviewedOrders, setReviewedOrders] = useState<ReviewStatus[]>([]);
+  const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     if (!supabase || !user) {
       setOrders(null);
+      setReviewedOrders([]);
       return;
     }
     supabase
@@ -37,6 +43,14 @@ export default function MyOrders() {
       .select("id, product_name, amount, status, tracking_number, dispatched_at, created_at")
       .order("created_at", { ascending: false })
       .then(({ data }) => setOrders((data as Order[] | null) ?? []));
+    supabase
+      .from("reviews")
+      .select("order_id, is_published")
+      .not("order_id", "is", null)
+      .then(({ data }) => {
+        const rows = data as { order_id: string; is_published: boolean }[] | null;
+        setReviewedOrders((rows ?? []).map((r) => ({ orderId: r.order_id, isPublished: r.is_published })));
+      });
   }, [user]);
 
   // The sign-in token goes in a header, never in the URL (URLs end up in history and logs).
@@ -104,38 +118,73 @@ export default function MyOrders() {
             </Empty>
           ) : (
             <div className="space-y-4">
-              {orders.map((o) => (
-                <div key={o.id} className="flex flex-col gap-3 rounded-3xl border bg-card/70 p-5 backdrop-blur">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-serif text-lg">{o.product_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        ₹{o.amount} · {new Date(o.created_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-                        <Truck className="size-4" /> {o.status}
+              {orders.map((o) => {
+                const review = reviewedOrders.find((r) => r.orderId === o.id);
+                return (
+                  <div key={o.id} className="flex flex-col gap-3 rounded-3xl border bg-card/70 p-5 backdrop-blur">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-serif text-lg">{o.product_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          ₹{o.amount} · {new Date(o.created_at).toLocaleDateString("en-IN", { dateStyle: "medium" })}
+                        </p>
                       </div>
-                      {o.dispatched_at && (
-                        <button
-                          onClick={() => void downloadInvoice(o.id)}
-                          title="Download invoice"
-                          aria-label="Download invoice"
-                          className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border bg-background transition-colors hover:bg-secondary"
-                        >
-                          <Download className="size-4" />
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+                          <Truck className="size-4" /> {o.status}
+                        </div>
+                        {o.dispatched_at && (
+                          <button
+                            onClick={() => void downloadInvoice(o.id)}
+                            title="Download invoice"
+                            aria-label="Download invoice"
+                            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border bg-background transition-colors hover:bg-secondary"
+                          >
+                            <Download className="size-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
+                    {o.tracking_number && <ShipmentJourney orderId={o.id} />}
+                    {o.status === "Delivered" && (
+                      <div className="pt-1">
+                        {review ? (
+                          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Star className="size-3.5 fill-primary text-primary" />
+                            {review.isPublished ? "Your review is published" : "Your review is awaiting approval"}
+                          </p>
+                        ) : (
+                          <button
+                            onClick={() => setReviewOrder(o)}
+                            className="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-medium transition-colors hover:bg-secondary"
+                          >
+                            <Star className="size-3.5" /> Write a Review
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {o.tracking_number && <ShipmentJourney orderId={o.id} />}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Reveal>
       </div>
+
+      {reviewOrder && user && (
+        <WriteReviewDialog
+          open
+          onClose={() => setReviewOrder(null)}
+          orderId={reviewOrder.id}
+          productName={reviewOrder.product_name}
+          customerName={profile?.fullName ?? user.email ?? "Customer"}
+          userId={user.id}
+          onSubmitted={() => {
+            setReviewedOrders((prev) => [...prev, { orderId: reviewOrder.id, isPublished: false }]);
+            setReviewOrder(null);
+          }}
+        />
+      )}
     </section>
   );
 }
