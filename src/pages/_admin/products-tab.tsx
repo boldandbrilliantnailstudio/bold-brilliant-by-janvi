@@ -1,6 +1,7 @@
 // Shop (Press Ons) admin tab: add, edit, delete products with photo upload, name, price, stock,
 // "Sold Out" toggle, and show/hide (is_active). Prices set here are exactly what customers pay -
-// api/create-order.ts always reads the price from this same `products` table.
+// api/create-order.ts always reads the price from this same `products` table. Each product can
+// also have 2-4 extra "angle" photos (product_images), shown as a gallery on the product page.
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ImagePlus, Loader2, Package, Pencil, Plus, Trash2 } from "lucide-react";
@@ -21,6 +22,8 @@ type Product = {
   sort_order: number;
 };
 
+type ProductImage = { id: string; product_id: string; image_url: string; sort_order: number };
+
 type FormState = {
   name: string;
   description: string;
@@ -33,6 +36,7 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = { name: "", description: "", price: "", compareAtPrice: "", stock: "", imageUrl: "", soldOut: false, isActive: true };
+const MAX_EXTRA_PHOTOS = 4;
 
 export default function ProductsTab({ password }: { password: string }) {
   const [products, setProducts] = useState<Product[] | null>(null);
@@ -126,6 +130,84 @@ export default function ProductsTab({ password }: { password: string }) {
   );
 }
 
+// Extra photo gallery (different angles) for one product. Only shown once the product exists
+// (has an id), since product_images needs a product_id to attach to.
+function ExtraPhotos({ password, productId }: { password: string; productId: string }) {
+  const [images, setImages] = useState<ProductImage[] | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const load = () => {
+    void adminApi.list<ProductImage>(password, "product_images").then(({ ok, data }) => {
+      if (ok) setImages((data.rows ?? []).filter((img) => img.product_id === productId));
+    });
+  };
+  useEffect(load, [password, productId]);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const { ok, data } = await adminApi.upload(password, dataUrl, "products");
+      if (!ok || !data.url) throw new Error(data.error ?? "Upload failed");
+      const sortOrder = images?.length ?? 0;
+      const created = await adminApi.create<ProductImage>(password, "product_images", { product_id: productId, image_url: data.url, sort_order: sortOrder });
+      if (!created.ok) throw new Error(created.data.error ?? "Could not save photo");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not upload photo");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const remove = async (img: ProductImage) => {
+    const { ok, data } = await adminApi.remove(password, "product_images", img.id);
+    if (!ok) {
+      toast.error(data.error ?? "Could not remove photo");
+      return;
+    }
+    setImages((prev) => prev?.filter((x) => x.id !== img.id) ?? null);
+  };
+
+  const count = images?.length ?? 0;
+
+  return (
+    <div>
+      <label className={LABEL}>Extra Angle Photos ({count}/{MAX_EXTRA_PHOTOS})</label>
+      <div className="flex flex-wrap gap-2">
+        {images?.map((img) => (
+          <div key={img.id} className="relative size-16 shrink-0">
+            <img src={img.image_url} alt="Extra angle" className="size-16 rounded-xl object-cover" />
+            <button
+              onClick={() => void remove(img)}
+              aria-label="Remove photo"
+              className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-destructive text-destructive-foreground"
+            >
+              <Trash2 className="size-3" />
+            </button>
+          </div>
+        ))}
+        {count < MAX_EXTRA_PHOTOS && (
+          <label className="inline-flex size-16 shrink-0 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed text-muted-foreground hover:bg-muted">
+            {uploading ? <Loader2 className="size-5 animate-spin" /> : <ImagePlus className="size-5" />}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleUpload(file);
+              }}
+            />
+          </label>
+        )}
+      </div>
+      <p className="pt-1.5 text-xs text-muted-foreground">These show as a swipeable gallery alongside the main photo on the product page.</p>
+    </div>
+  );
+}
+
 function ProductFormDialog({ password, product, onClose, onSaved }: { password: string; product: Product | null; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState<FormState>(
     product
@@ -196,7 +278,7 @@ function ProductFormDialog({ password, product, onClose, onSaved }: { password: 
         <DialogTitle className="font-serif text-2xl">{product ? "Edit Product" : "Add Product"}</DialogTitle>
         <div className="grid gap-4 pt-2">
           <div>
-            <label className={LABEL}>Photo</label>
+            <label className={LABEL}>Main Photo</label>
             <div className="flex items-center gap-3">
               {form.imageUrl ? (
                 <img src={form.imageUrl} alt="Preview" className="size-16 rounded-xl object-cover" />
@@ -221,6 +303,8 @@ function ProductFormDialog({ password, product, onClose, onSaved }: { password: 
               </label>
             </div>
           </div>
+          {product && <ExtraPhotos password={password} productId={product.id} />}
+          {!product && <p className="text-xs text-muted-foreground">Save the product first, then edit it again to add extra angle photos.</p>}
           <div>
             <label className={LABEL}>Name</label>
             <input className={FIELD} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nude Glaze Set" />
