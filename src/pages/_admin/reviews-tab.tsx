@@ -1,17 +1,38 @@
-// Customer reviews admin tab: add, publish/unpublish, or remove reviews shown in Testimonials
-// (src/hooks/use-reviews.ts).
+// Customer reviews admin tab: add reviews yourself, and approve/reject reviews customers
+// wrote themselves after a delivered order (src/pages/_components/write-review-dialog.tsx).
+// Customer-submitted reviews land here hidden (is_published = false) until approved; approving
+// publishes them on the site (src/hooks/use-reviews.ts), rejecting deletes them for good.
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Star, Trash2 } from "lucide-react";
+import { Check, Plus, Star, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 import { adminApi } from "./api.ts";
 import { AdminButton, AdminCard, EmptyRow, FIELD, LABEL, Spinner, Toggle } from "./ui.tsx";
 
-type Review = { id: string; customer_name: string; rating: number; body: string; photo_url: string | null; is_published: boolean };
+type Review = {
+  id: string;
+  customer_name: string;
+  rating: number;
+  body: string;
+  photo_url: string | null;
+  is_published: boolean;
+  user_id: string | null;
+};
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-0.5 text-primary">
+      {Array.from({ length: 5 }).map((_, j) => (
+        <Star key={j} className="size-3.5" fill={j < rating ? "currentColor" : "none"} />
+      ))}
+    </div>
+  );
+}
 
 export default function ReviewsTab({ password }: { password: string }) {
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [creating, setCreating] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = () => {
     void adminApi.list<Review>(password, "reviews").then(({ ok, data }) => {
@@ -20,6 +41,34 @@ export default function ReviewsTab({ password }: { password: string }) {
     });
   };
   useEffect(load, [password]);
+
+  const pending = reviews?.filter((r) => !r.is_published && r.user_id) ?? [];
+  const published = reviews?.filter((r) => !(!r.is_published && r.user_id)) ?? [];
+
+  const approve = async (r: Review) => {
+    setBusyId(r.id);
+    const { ok, data } = await adminApi.update<Review>(password, "reviews", { id: r.id, is_published: true });
+    setBusyId(null);
+    if (!ok) {
+      toast.error(data.error ?? "Could not approve review");
+      return;
+    }
+    toast.success("Review approved and published");
+    setReviews((prev) => prev?.map((x) => (x.id === r.id ? { ...x, is_published: true } : x)) ?? null);
+  };
+
+  const reject = async (r: Review) => {
+    if (!confirm(`Reject and delete this review from "${r.customer_name}"? This cannot be undone.`)) return;
+    setBusyId(r.id);
+    const { ok, data } = await adminApi.remove(password, "reviews", r.id);
+    setBusyId(null);
+    if (!ok) {
+      toast.error(data.error ?? "Could not reject review");
+      return;
+    }
+    toast.success("Review rejected");
+    setReviews((prev) => prev?.filter((x) => x.id !== r.id) ?? null);
+  };
 
   const togglePublished = async (r: Review, value: boolean) => {
     const { ok, data } = await adminApi.update<Review>(password, "reviews", { id: r.id, is_published: value });
@@ -41,7 +90,7 @@ export default function ReviewsTab({ password }: { password: string }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="font-serif text-2xl">Customer Reviews</h2>
         <AdminButton onClick={() => setCreating(true)}>
@@ -51,26 +100,56 @@ export default function ReviewsTab({ password }: { password: string }) {
 
       {reviews === null ? (
         <EmptyRow>Loading reviews...</EmptyRow>
-      ) : reviews.length === 0 ? (
-        <EmptyRow>No reviews yet.</EmptyRow>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {reviews.map((r) => (
-            <AdminCard key={r.id} className="space-y-2">
-              <div className="flex gap-0.5 text-primary">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <Star key={j} className="size-3.5" fill={j < r.rating ? "currentColor" : "none"} />
+        <>
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Pending Approval {pending.length > 0 && `(${pending.length})`}
+            </h3>
+            {pending.length === 0 ? (
+              <EmptyRow>No reviews waiting for approval.</EmptyRow>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {pending.map((r) => (
+                  <AdminCard key={r.id} className="space-y-2 border-primary/30">
+                    <Stars rating={r.rating} />
+                    <p className="text-sm text-muted-foreground">&ldquo;{r.body}&rdquo;</p>
+                    <p className="text-sm font-medium">{r.customer_name}</p>
+                    <div className="flex gap-2 pt-1">
+                      <AdminButton onClick={() => void approve(r)} disabled={busyId === r.id} className="flex-1">
+                        {busyId === r.id ? <Spinner /> : <Check className="size-3.5" />} Approve
+                      </AdminButton>
+                      <AdminButton variant="danger" onClick={() => void reject(r)} disabled={busyId === r.id} className="flex-1">
+                        <Trash2 className="size-3.5" /> Reject
+                      </AdminButton>
+                    </div>
+                  </AdminCard>
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground">&ldquo;{r.body}&rdquo;</p>
-              <p className="text-sm font-medium">{r.customer_name}</p>
-              <Toggle checked={r.is_published} onChange={(v) => void togglePublished(r, v)} label={r.is_published ? "Published" : "Hidden"} />
-              <AdminButton variant="danger" onClick={() => void remove(r)} className="w-full">
-                <Trash2 className="size-3.5" /> Delete
-              </AdminButton>
-            </AdminCard>
-          ))}
-        </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Published & Hidden Reviews</h3>
+            {published.length === 0 ? (
+              <EmptyRow>No reviews yet.</EmptyRow>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {published.map((r) => (
+                  <AdminCard key={r.id} className="space-y-2">
+                    <Stars rating={r.rating} />
+                    <p className="text-sm text-muted-foreground">&ldquo;{r.body}&rdquo;</p>
+                    <p className="text-sm font-medium">{r.customer_name}</p>
+                    <Toggle checked={r.is_published} onChange={(v) => void togglePublished(r, v)} label={r.is_published ? "Published" : "Hidden"} />
+                    <AdminButton variant="danger" onClick={() => void remove(r)} className="w-full">
+                      <Trash2 className="size-3.5" /> Delete
+                    </AdminButton>
+                  </AdminCard>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {creating && (
