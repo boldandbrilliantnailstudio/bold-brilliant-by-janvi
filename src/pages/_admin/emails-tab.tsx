@@ -1,14 +1,17 @@
 // Emails admin tab: every automatic email the website sends (orders, bookings, and alerts to the
-// owner). Each one can be switched on/off and its subject + HTML design edited and previewed.
-// Sending needs RESEND_API_KEY (and EMAIL_FROM for your own domain) in Vercel env vars.
+// owner). Each one can be switched on/off, have its subject + HTML design edited/previewed, and
+// pick which verified sender address to send from (Hissa 8 fix) instead of one hardcoded address.
+// Sending needs RESEND_API_KEY (and EMAIL_FROM as a fallback) in Vercel env vars.
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Eye, Mail, Save } from "lucide-react";
+import { Eye, Mail, Plus, Save, Trash2 } from "lucide-react";
 import { adminApi } from "./api.ts";
 import { AdminButton, AdminCard, EmptyRow, FIELD, LABEL, Spinner, Toggle } from "./ui.tsx";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 
-type EmailTemplate = { key: string; name: string; audience: "customer" | "admin"; subject: string; html: string; enabled: boolean };
+type EmailTemplate = { key: string; name: string; audience: "customer" | "admin"; subject: string; html: string; enabled: boolean; from_address: string | null };
+type SenderAddress = { label: string; email: string };
+type SiteSettingsRow = { sender_addresses?: SenderAddress[] };
 
 const ORDER_VARS = "{{brand}} {{customer_name}} {{phone}} {{order_id}} {{product_name}} {{total}} {{courier}} {{tracking_number}}";
 const BOOKING_VARS = "{{brand}} {{name}} {{phone}} {{booking_number}} {{service}} {{date}} {{time}} {{message}}";
@@ -32,7 +35,76 @@ function PreviewDialog({ open, onOpenChange, subject, html }: { open: boolean; o
   );
 }
 
-function TemplateEditor({ password, initial }: { password: string; initial: EmailTemplate }) {
+// Admin > Emails > Sender Addresses: the list of verified "from" addresses (e.g. support@,
+// offers@) that any automatic or ad-hoc email can be sent from. Each address must already be
+// verified with the email provider (Resend) - this list is just labels the admin can pick from.
+function SenderAddressesCard({ password }: { password: string }) {
+  const [addresses, setAddresses] = useState<SenderAddress[] | null>(null);
+  const [newLabel, setNewLabel] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    void adminApi.list<SiteSettingsRow>(password, "site_settings").then(({ ok, data }) => {
+      if (ok) setAddresses((data as unknown as { row?: SiteSettingsRow }).row?.sender_addresses ?? []);
+    });
+  }, [password]);
+
+  const save = async (next: SenderAddress[]) => {
+    setSaving(true);
+    const { ok, data } = await adminApi.update(password, "site_settings", { sender_addresses: next });
+    setSaving(false);
+    if (!ok) {
+      toast.error(data.error ?? "Could not save sender addresses");
+      return;
+    }
+    setAddresses(next);
+    toast.success("Sender addresses saved");
+  };
+
+  const add = () => {
+    if (!newLabel.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail.trim())) {
+      toast.error("Please enter a label and a valid email address.");
+      return;
+    }
+    void save([...(addresses ?? []), { label: newLabel.trim(), email: newEmail.trim().toLowerCase() }]);
+    setNewLabel("");
+    setNewEmail("");
+  };
+
+  const remove = (email: string) => void save((addresses ?? []).filter((a) => a.email !== email));
+
+  return (
+    <AdminCard className="space-y-3">
+      <div>
+        <p className="font-medium">Sender Addresses</p>
+        <p className="text-xs text-muted-foreground">Verified addresses (e.g. support@, offers@) any email can be sent from. Each must already be verified with your email provider (Resend).</p>
+      </div>
+      {addresses === null ? (
+        <EmptyRow>Loading...</EmptyRow>
+      ) : (
+        <div className="space-y-2">
+          {addresses.map((a) => (
+            <div key={a.email} className="flex items-center justify-between rounded-xl border p-2 text-sm">
+              <span>{a.label} <span className="text-muted-foreground">({a.email})</span></span>
+              <AdminButton variant="danger" onClick={() => remove(a.email)} disabled={saving}>
+                <Trash2 className="size-3.5" />
+              </AdminButton>
+            </div>
+          ))}
+          {addresses.length === 0 && <p className="text-sm text-muted-foreground">No sender addresses added yet.</p>}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input className={FIELD} placeholder="Label, e.g. Support" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+        <input className={FIELD} placeholder="support@yourdomain.com" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+        <AdminButton onClick={add} disabled={saving}><Plus className="size-4" /></AdminButton>
+      </div>
+    </AdminCard>
+  );
+}
+
+function TemplateEditor({ password, initial, senderAddresses }: { password: string; initial: EmailTemplate; senderAddresses: SenderAddress[] }) {
   const [form, setForm] = useState(initial);
   const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -41,7 +113,7 @@ function TemplateEditor({ password, initial }: { password: string; initial: Emai
 
   const save = async (next: EmailTemplate) => {
     setSaving(true);
-    const { ok, data } = await adminApi.update(password, "email_templates", { key: next.key, subject: next.subject, html: next.html, enabled: next.enabled });
+    const { ok, data } = await adminApi.update(password, "email_templates", { key: next.key, subject: next.subject, html: next.html, enabled: next.enabled, from_address: next.from_address });
     setSaving(false);
     if (!ok) {
       toast.error(data.error ?? "Could not save email");
@@ -74,6 +146,17 @@ function TemplateEditor({ password, initial }: { password: string; initial: Emai
       </div>
       {open && (
         <div className="space-y-3">
+          {senderAddresses.length > 0 && (
+            <div>
+              <label className={LABEL}>Send from</label>
+              <select className={FIELD} value={form.from_address ?? ""} onChange={(e) => setForm({ ...form, from_address: e.target.value || null })}>
+                <option value="">Default (from EMAIL_FROM)</option>
+                {senderAddresses.map((a) => (
+                  <option key={a.email} value={a.email}>{a.label} ({a.email})</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className={LABEL}>Subject</label>
             <input className={FIELD} value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
@@ -96,24 +179,29 @@ function TemplateEditor({ password, initial }: { password: string; initial: Emai
 
 export default function EmailsTab({ password }: { password: string }) {
   const [templates, setTemplates] = useState<EmailTemplate[] | null>(null);
+  const [senderAddresses, setSenderAddresses] = useState<SenderAddress[]>([]);
 
   useEffect(() => {
     void adminApi.list<EmailTemplate>(password, "email_templates").then(({ ok, data }) => {
       if (ok) setTemplates(data.rows ?? []);
       else toast.error(data.error ?? "Could not load emails");
     });
+    void adminApi.list<SiteSettingsRow>(password, "site_settings").then(({ ok, data }) => {
+      if (ok) setSenderAddresses((data as unknown as { row?: SiteSettingsRow }).row?.sender_addresses ?? []);
+    });
   }, [password]);
 
   return (
     <div className="space-y-4">
       <h2 className="font-serif text-2xl">Emails</h2>
-      <p className="text-sm text-muted-foreground">Switch each email on or off and edit its design. Customer emails go to the email they signed in or booked with.</p>
+      <p className="text-sm text-muted-foreground">Switch each email on or off, edit its design, and choose which address it sends from. Customer emails go to the email they signed in or booked with.</p>
+      <SenderAddressesCard password={password} />
       {templates === null ? (
         <EmptyRow>Loading emails...</EmptyRow>
       ) : templates.length === 0 ? (
         <EmptyRow>No email templates found.</EmptyRow>
       ) : (
-        templates.map((t) => <TemplateEditor key={t.key} password={password} initial={t} />)
+        templates.map((t) => <TemplateEditor key={t.key} password={password} initial={t} senderAddresses={senderAddresses} />)
       )}
     </div>
   );
