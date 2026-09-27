@@ -12,7 +12,7 @@ const ITEMS = [
 ] as const;
 
 export default function BottomNav() {
-  const { profile, isSignedIn } = useProfile();
+  const { profile, isSignedIn, avatarUrl } = useProfile();
   const initial = isSignedIn && profile ? profile.fullName.charAt(0).toUpperCase() : null;
 
   return (
@@ -31,9 +31,13 @@ export default function BottomNav() {
         ))}
         <li>
           <a href="/profile" className="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-primary">
-            <span className={cn("grid size-5 place-items-center rounded-full", initial && "bg-primary text-primary-foreground")}>
-              {initial ? <span className="text-[10px] font-serif font-semibold">{initial}</span> : <User className="size-5" />}
-            </span>
+            {isSignedIn && avatarUrl ? (
+              <img src={avatarUrl} alt="" referrerPolicy="no-referrer" className="size-5 rounded-full object-cover" />
+            ) : (
+              <span className={cn("grid size-5 place-items-center rounded-full", initial && "bg-primary text-primary-foreground")}>
+                {initial ? <span className="text-[10px] font-serif font-semibold">{initial}</span> : <User className="size-5" />}
+              </span>
+            )}
             Profile
           </a>
         </li>
