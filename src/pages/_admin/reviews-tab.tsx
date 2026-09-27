@@ -1,10 +1,11 @@
 // Customer reviews admin tab: add reviews yourself, and approve/reject reviews customers
-// wrote themselves after a delivered order (src/pages/_components/write-review-dialog.tsx).
-// Customer-submitted reviews land here hidden (is_published = false) until approved; approving
-// publishes them on the site (src/hooks/use-reviews.ts), rejecting deletes them for good.
+// wrote themselves - either for a specific product (src/pages/_components/write-product-review-dialog.tsx)
+// or for a delivered order (src/pages/_components/write-review-dialog.tsx). Customer-submitted
+// reviews land here hidden (is_published = false) until approved; approving publishes them
+// (product page or homepage Testimonials), rejecting deletes them for good.
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Check, Plus, Star, Trash2 } from "lucide-react";
+import { Check, Package, Plus, Star, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 import { adminApi } from "./api.ts";
 import { AdminButton, AdminCard, EmptyRow, FIELD, LABEL, Spinner, Toggle } from "./ui.tsx";
@@ -17,7 +18,10 @@ type Review = {
   photo_url: string | null;
   is_published: boolean;
   user_id: string | null;
+  product_id: string | null;
 };
+
+type Product = { id: string; name: string };
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -31,6 +35,7 @@ function Stars({ rating }: { rating: number }) {
 
 export default function ReviewsTab({ password }: { password: string }) {
   const [reviews, setReviews] = useState<Review[] | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -41,6 +46,13 @@ export default function ReviewsTab({ password }: { password: string }) {
     });
   };
   useEffect(load, [password]);
+  useEffect(() => {
+    void adminApi.list<Product>(password, "products").then(({ ok, data }) => {
+      if (ok) setProducts(data.rows ?? []);
+    });
+  }, [password]);
+
+  const productName = (id: string | null) => (id ? products.find((p) => p.id === id)?.name ?? "a product" : null);
 
   const pending = reviews?.filter((r) => !r.is_published && r.user_id) ?? [];
   const published = reviews?.filter((r) => !(!r.is_published && r.user_id)) ?? [];
@@ -112,8 +124,14 @@ export default function ReviewsTab({ password }: { password: string }) {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {pending.map((r) => (
                   <AdminCard key={r.id} className="space-y-2 border-primary/30">
+                    {r.product_id && (
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                        <Package className="size-3.5" /> {productName(r.product_id)}
+                      </p>
+                    )}
                     <Stars rating={r.rating} />
                     <p className="text-sm text-muted-foreground">&ldquo;{r.body}&rdquo;</p>
+                    {r.photo_url && <img src={r.photo_url} alt="Customer photo" className="h-20 w-20 rounded-xl object-cover" />}
                     <p className="text-sm font-medium">{r.customer_name}</p>
                     <div className="flex gap-2 pt-1">
                       <AdminButton onClick={() => void approve(r)} disabled={busyId === r.id} className="flex-1">
@@ -137,8 +155,14 @@ export default function ReviewsTab({ password }: { password: string }) {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {published.map((r) => (
                   <AdminCard key={r.id} className="space-y-2">
+                    {r.product_id && (
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                        <Package className="size-3.5" /> {productName(r.product_id)}
+                      </p>
+                    )}
                     <Stars rating={r.rating} />
                     <p className="text-sm text-muted-foreground">&ldquo;{r.body}&rdquo;</p>
+                    {r.photo_url && <img src={r.photo_url} alt="Customer photo" className="h-20 w-20 rounded-xl object-cover" />}
                     <p className="text-sm font-medium">{r.customer_name}</p>
                     <Toggle checked={r.is_published} onChange={(v) => void togglePublished(r, v)} label={r.is_published ? "Published" : "Hidden"} />
                     <AdminButton variant="danger" onClick={() => void remove(r)} className="w-full">
