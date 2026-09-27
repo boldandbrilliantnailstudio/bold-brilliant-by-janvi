@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty.tsx";
 import { useProductBySlug } from "@/hooks/use-product-by-slug.ts";
-import { useProductReviews } from "@/hooks/use-product-reviews.ts";
+import { useProductReviews, type ProductReview } from "@/hooks/use-product-reviews.ts";
 import { useCart } from "@/hooks/use-cart.tsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth.ts";
 import { useProfile } from "@/hooks/use-profile.ts";
@@ -99,28 +99,48 @@ function ProductRatingSummary({ productId }: { productId: string }) {
   );
 }
 
+// 5-star to 1-star breakdown bars, so shoppers can see the rating spread, not just the average.
+function RatingBreakdown({ reviews }: { reviews: ProductReview[] }) {
+  const total = reviews.length;
+  const counts = [5, 4, 3, 2, 1].map((star) => reviews.filter((r) => r.rating === star).length);
+  return (
+    <div className="grid gap-1.5 pt-1">
+      {[5, 4, 3, 2, 1].map((star, i) => {
+        const count = counts[i];
+        const pct = total > 0 ? (count / total) * 100 : 0;
+        return (
+          <div key={star} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="w-8 shrink-0">{star} star</span>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+            </div>
+            <span className="w-6 shrink-0 text-right">{count}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ReviewsSection({ product }: { product: Product }) {
   const { user, isSignedIn } = useCustomerAuth();
   const { profile, openProfile } = useProfile();
   const reviews = useProductReviews(product.id);
   const [writing, setWriting] = useState(false);
-  const [myReviewStatus, setMyReviewStatus] = useState<"none" | "pending" | "published">("none");
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
 
   useEffect(() => {
     if (!supabase || !user) {
-      setMyReviewStatus("none");
+      setAlreadyReviewed(false);
       return;
     }
     supabase
       .from("reviews")
-      .select("is_published")
+      .select("id")
       .eq("product_id", product.id)
       .eq("user_id", user.id)
       .maybeSingle()
-      .then(({ data }) => {
-        const row = data as { is_published: boolean } | null;
-        setMyReviewStatus(row ? (row.is_published ? "published" : "pending") : "none");
-      });
+      .then(({ data }) => setAlreadyReviewed(!!data));
   }, [product.id, user]);
 
   const avgRating = reviews && reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : null;
@@ -136,30 +156,33 @@ function ReviewsSection({ product }: { product: Product }) {
   return (
     <>
       <div className="border-t pt-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="font-serif text-2xl">Customer Reviews</h2>
-            {avgRating !== null && (
-              <div className="flex items-center gap-1.5 pt-1">
-                <div className="flex gap-0.5 text-primary">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star key={j} className="size-4" fill={j < Math.round(avgRating) ? "currentColor" : "none"} />
-                  ))}
+            {avgRating !== null && reviews && (
+              <>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <div className="flex gap-0.5 text-primary">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <Star key={j} className="size-4" fill={j < Math.round(avgRating) ? "currentColor" : "none"} />
+                    ))}
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {avgRating.toFixed(1)} ({reviews.length} review{reviews.length === 1 ? "" : "s"})
+                  </span>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {avgRating.toFixed(1)} ({reviews?.length} review{reviews?.length === 1 ? "" : "s"})
-                </span>
-              </div>
+                <div className="max-w-xs pt-2">
+                  <RatingBreakdown reviews={reviews} />
+                </div>
+              </>
             )}
           </div>
-          {myReviewStatus === "none" ? (
+          {!alreadyReviewed ? (
             <button onClick={startReview} className="text-sm font-medium text-primary hover:underline">
               Write a Review
             </button>
           ) : (
-            <span className="text-xs text-muted-foreground">
-              {myReviewStatus === "pending" ? "Your review is awaiting approval" : "You reviewed this"}
-            </span>
+            <span className="text-xs text-muted-foreground">You reviewed this</span>
           )}
         </div>
 
@@ -184,7 +207,13 @@ function ReviewsSection({ product }: { product: Product }) {
                     </div>
                   </div>
                   <p className="pt-1.5 text-sm text-muted-foreground">{r.text}</p>
-                  {r.photoUrl && <img src={r.photoUrl} alt={`${r.name}'s photo`} className="mt-2 h-28 w-28 rounded-xl object-cover" />}
+                  {r.photoUrls.length > 0 && (
+                    <div className="mt-2 flex gap-2">
+                      {r.photoUrls.map((url, i) => (
+                        <img key={i} src={url} alt={`${r.name}'s photo ${i + 1}`} className="h-20 w-20 rounded-xl object-cover" />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -199,10 +228,9 @@ function ReviewsSection({ product }: { product: Product }) {
           productId={product.id}
           productName={product.name}
           customerName={profile?.fullName ?? user.email ?? "Customer"}
-          userId={user.id}
           onSubmitted={() => {
             setWriting(false);
-            setMyReviewStatus("pending");
+            setAlreadyReviewed(true);
           }}
         />
       )}
