@@ -2,7 +2,7 @@
 // for the link preview). Big swipeable + zoomable photo gallery up top, full description in the
 // middle, and this product's own reviews at the bottom (separate from the homepage Testimonials).
 import { useEffect, useState } from "react";
-import { ShoppingBasket, Star, X, ZoomIn } from "lucide-react";
+import { BadgeCheck, ShoppingBasket, Star, X, ZoomIn } from "lucide-react";
 import { toast } from "sonner";
 import Header from "./_components/header.tsx";
 import Footer from "./_components/footer.tsx";
@@ -199,7 +199,14 @@ function ReviewsSection({ product }: { product: Product }) {
               {reviews.map((r) => (
                 <div key={r.id} className="rounded-2xl border bg-card/70 p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium">{r.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{r.name}</p>
+                      {r.verified && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                          <BadgeCheck className="size-3" /> Verified Buyer
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-0.5 text-primary">
                       {Array.from({ length: 5 }).map((_, j) => (
                         <Star key={j} className="size-3.5" fill={j < r.rating ? "currentColor" : "none"} />
