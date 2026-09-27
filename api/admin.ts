@@ -44,6 +44,13 @@ const RESOURCES: Record<string, Resource> = {
     allowInsert: true,
     allowDelete: true,
   },
+  product_images: {
+    table: "product_images",
+    order: "sort_order.asc",
+    writable: ["product_id", "image_url", "sort_order"],
+    allowInsert: true,
+    allowDelete: true,
+  },
   coupons: {
     table: "coupons",
     order: "created_at.desc",
