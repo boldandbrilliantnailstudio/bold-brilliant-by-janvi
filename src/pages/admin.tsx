@@ -22,6 +22,7 @@ import SiteSettingsTab from "./_admin/site-settings-tab.tsx";
 import ContentTab from "./_admin/content-tab.tsx";
 import InvoiceTemplateTab from "./_admin/invoice-template-tab.tsx";
 import EmailsTab from "./_admin/emails-tab.tsx";
+import TemplatesTab from "./_admin/templates-tab.tsx";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard", group: "manage", Component: DashboardTab },
@@ -39,6 +40,7 @@ const TABS = [
   { id: "content", label: "Website Text", group: "settings", Component: ContentTab },
   { id: "invoice", label: "Invoice Design", group: "settings", Component: InvoiceTemplateTab },
   { id: "emails", label: "Emails", group: "settings", Component: EmailsTab },
+  { id: "templates", label: "Message Templates", group: "settings", Component: TemplatesTab },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
