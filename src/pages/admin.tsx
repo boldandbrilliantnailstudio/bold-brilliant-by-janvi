@@ -17,6 +17,7 @@ import BookingsTab from "./_admin/bookings-tab.tsx";
 import ServicesTab from "./_admin/services-tab.tsx";
 import CustomRequestsTab from "./_admin/custom-requests-tab.tsx";
 import ReviewsTab from "./_admin/reviews-tab.tsx";
+import CustomersTab from "./_admin/customers-tab.tsx";
 import SiteSettingsTab from "./_admin/site-settings-tab.tsx";
 import ContentTab from "./_admin/content-tab.tsx";
 import InvoiceTemplateTab from "./_admin/invoice-template-tab.tsx";
@@ -30,6 +31,7 @@ const TABS = [
   { id: "requests", label: "Custom Requests", group: "manage", Component: CustomRequestsTab },
   { id: "products", label: "Shop", group: "manage", Component: ProductsTab },
   { id: "custom-sets", label: "Custom Sets", group: "manage", Component: CustomSetsTab },
+  { id: "customers", label: "Customers", group: "manage", Component: CustomersTab },
   { id: "coupons", label: "Coupons", group: "manage", Component: CouponsTab },
   { id: "banners", label: "Coupon Banners", group: "manage", Component: BannersTab },
   { id: "reviews", label: "Reviews", group: "manage", Component: ReviewsTab },
