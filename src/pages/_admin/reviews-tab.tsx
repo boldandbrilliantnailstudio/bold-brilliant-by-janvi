@@ -1,9 +1,10 @@
 // Customer reviews admin tab: add reviews yourself, and approve/reject reviews customers
 // wrote themselves - either for a specific product (src/pages/_components/write-product-review-dialog.tsx)
-// or for a delivered order (src/pages/_components/write-review-dialog.tsx). Customer-submitted
-// reviews land here hidden (is_published = false) until approved; approving publishes them
-// (product page or homepage Testimonials), rejecting deletes them for good.
-import { useEffect, useState } from "react";
+// or for a delivered order/completed booking (src/pages/_components/write-review-dialog.tsx).
+// Reviews are split into two tabs - Studio Reviews (order/booking, shown on homepage
+// Testimonials) and Product Reviews (shown on the product page) - each with its own
+// rating and date filters, since the two lists can grow large and mean different things.
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, Package, Plus, Star, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
@@ -16,9 +17,11 @@ type Review = {
   rating: number;
   body: string;
   photo_url: string | null;
+  service_name: string | null;
   is_published: boolean;
   user_id: string | null;
   product_id: string | null;
+  created_at: string;
 };
 
 type Product = { id: string; name: string };
@@ -33,11 +36,54 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
+type Filters = { rating: string; from: string; to: string };
+const EMPTY_FILTERS: Filters = { rating: "all", from: "", to: "" };
+
+function FilterBar({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <div>
+        <label className={LABEL}>Rating</label>
+        <select className={FIELD} value={filters.rating} onChange={(e) => onChange({ ...filters, rating: e.target.value })}>
+          <option value="all">All ratings</option>
+          {[5, 4, 3, 2, 1].map((n) => (
+            <option key={n} value={n}>{n} star</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={LABEL}>From</label>
+        <input type="date" className={FIELD} value={filters.from} onChange={(e) => onChange({ ...filters, from: e.target.value })} />
+      </div>
+      <div>
+        <label className={LABEL}>To</label>
+        <input type="date" className={FIELD} value={filters.to} onChange={(e) => onChange({ ...filters, to: e.target.value })} />
+      </div>
+      {(filters.rating !== "all" || filters.from || filters.to) && (
+        <AdminButton variant="secondary" onClick={() => onChange(EMPTY_FILTERS)}>Clear filters</AdminButton>
+      )}
+    </div>
+  );
+}
+
+function applyFilters(reviews: Review[], filters: Filters): Review[] {
+  return reviews.filter((r) => {
+    if (filters.rating !== "all" && r.rating !== Number(filters.rating)) return false;
+    const day = r.created_at.slice(0, 10);
+    if (filters.from && day < filters.from) return false;
+    if (filters.to && day > filters.to) return false;
+    return true;
+  });
+}
+
 export default function ReviewsTab({ password }: { password: string }) {
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"studio" | "product">("studio");
+  const [studioFilters, setStudioFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [productFilters, setProductFilters] = useState<Filters>(EMPTY_FILTERS);
 
   const load = () => {
     void adminApi.list<Review>(password, "reviews").then(({ ok, data }) => {
@@ -54,8 +100,11 @@ export default function ReviewsTab({ password }: { password: string }) {
 
   const productName = (id: string | null) => (id ? products.find((p) => p.id === id)?.name ?? "a product" : null);
 
-  const pending = reviews?.filter((r) => !r.is_published && r.user_id) ?? [];
-  const published = reviews?.filter((r) => !(!r.is_published && r.user_id)) ?? [];
+  const studioReviews = useMemo(() => reviews?.filter((r) => !r.product_id) ?? [], [reviews]);
+  const productReviews = useMemo(() => reviews?.filter((r) => !!r.product_id) ?? [], [reviews]);
+
+  const pending = (list: Review[]) => list.filter((r) => !r.is_published && r.user_id);
+  const published = (list: Review[]) => list.filter((r) => !(!r.is_published && r.user_id));
 
   const approve = async (r: Review) => {
     setBusyId(r.id);
@@ -101,34 +150,58 @@ export default function ReviewsTab({ password }: { password: string }) {
     setReviews((prev) => prev?.filter((x) => x.id !== r.id) ?? null);
   };
 
+  const activeList = tab === "studio" ? studioReviews : productReviews;
+  const activeFilters = tab === "studio" ? studioFilters : productFilters;
+  const setActiveFilters = tab === "studio" ? setStudioFilters : setProductFilters;
+  const filteredPending = applyFilters(pending(activeList), activeFilters);
+  const filteredPublished = applyFilters(published(activeList), activeFilters);
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-serif text-2xl">Customer Reviews</h2>
         <AdminButton onClick={() => setCreating(true)}>
           <Plus className="size-4" /> Add Review
         </AdminButton>
       </div>
 
+      <div className="flex gap-2 border-b">
+        <button
+          onClick={() => setTab("studio")}
+          className={`px-4 py-2 text-sm font-medium ${tab === "studio" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+        >
+          Studio Reviews {reviews !== null && `(${studioReviews.length})`}
+        </button>
+        <button
+          onClick={() => setTab("product")}
+          className={`px-4 py-2 text-sm font-medium ${tab === "product" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+        >
+          Product Reviews {reviews !== null && `(${productReviews.length})`}
+        </button>
+      </div>
+
       {reviews === null ? (
         <EmptyRow>Loading reviews...</EmptyRow>
       ) : (
         <>
+          <FilterBar filters={activeFilters} onChange={setActiveFilters} />
+
           <div className="space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Pending Approval {pending.length > 0 && `(${pending.length})`}
+              Pending Approval {filteredPending.length > 0 && `(${filteredPending.length})`}
             </h3>
-            {pending.length === 0 ? (
+            {filteredPending.length === 0 ? (
               <EmptyRow>No reviews waiting for approval.</EmptyRow>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {pending.map((r) => (
+                {filteredPending.map((r) => (
                   <AdminCard key={r.id} className="space-y-2 border-primary/30">
                     {r.product_id && (
                       <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
                         <Package className="size-3.5" /> {productName(r.product_id)}
                       </p>
                     )}
+                    {r.service_name && <p className="text-xs font-medium text-primary">{r.service_name}</p>}
                     <Stars rating={r.rating} />
                     <p className="text-sm text-muted-foreground">&ldquo;{r.body}&rdquo;</p>
                     {r.photo_url && <img src={r.photo_url} alt="Customer photo" className="h-20 w-20 rounded-xl object-cover" />}
@@ -149,17 +222,18 @@ export default function ReviewsTab({ password }: { password: string }) {
 
           <div className="space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Published & Hidden Reviews</h3>
-            {published.length === 0 ? (
-              <EmptyRow>No reviews yet.</EmptyRow>
+            {filteredPublished.length === 0 ? (
+              <EmptyRow>No reviews match these filters.</EmptyRow>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {published.map((r) => (
+                {filteredPublished.map((r) => (
                   <AdminCard key={r.id} className="space-y-2">
                     {r.product_id && (
                       <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
                         <Package className="size-3.5" /> {productName(r.product_id)}
                       </p>
                     )}
+                    {r.service_name && <p className="text-xs font-medium text-primary">{r.service_name}</p>}
                     <Stars rating={r.rating} />
                     <p className="text-sm text-muted-foreground">&ldquo;{r.body}&rdquo;</p>
                     {r.photo_url && <img src={r.photo_url} alt="Customer photo" className="h-20 w-20 rounded-xl object-cover" />}
@@ -194,6 +268,7 @@ function ReviewFormDialog({ password, onClose, onSaved }: { password: string; on
   const [name, setName] = useState("");
   const [rating, setRating] = useState(5);
   const [body, setBody] = useState("");
+  const [serviceName, setServiceName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -203,7 +278,14 @@ function ReviewFormDialog({ password, onClose, onSaved }: { password: string; on
       return;
     }
     setSaving(true);
-    const { ok, data } = await adminApi.create(password, "reviews", { customer_name: name.trim(), rating, body: body.trim(), is_published: true, sort_order: 0 });
+    const { ok, data } = await adminApi.create(password, "reviews", {
+      customer_name: name.trim(),
+      rating,
+      body: body.trim(),
+      service_name: serviceName.trim() || null,
+      is_published: true,
+      sort_order: 0,
+    });
     setSaving(false);
     if (!ok) {
       setError(data.error ?? "Could not save review");
@@ -221,6 +303,10 @@ function ReviewFormDialog({ password, onClose, onSaved }: { password: string; on
           <div>
             <label className={LABEL}>Customer Name</label>
             <input className={FIELD} value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya Shah" />
+          </div>
+          <div>
+            <label className={LABEL}>Service (optional)</label>
+            <input className={FIELD} value={serviceName} onChange={(e) => setServiceName(e.target.value)} placeholder="Gel Extensions" />
           </div>
           <div>
             <label className={LABEL}>Rating</label>
