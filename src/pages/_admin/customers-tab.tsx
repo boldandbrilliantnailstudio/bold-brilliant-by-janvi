@@ -1,10 +1,12 @@
 // Customer profiles admin tab (Hissa 6): search customers, see their spend/order/booking/review
-// history at a glance, and open a detail view with private admin notes and tags. Backed by
+// history at a glance, and open a detail view with private admin notes, tags, and a "Send
+// Coupon" action that creates a personal coupon for that customer (Hissa 7). Backed by
 // api/admin-customers.ts (separate from the generic adminApi since it aggregates across tables).
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Search, Star, Tag, User, X } from "lucide-react";
+import { Search, Send, Star, Tag, User, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
+import { adminApi } from "./api.ts";
 import { AdminButton, AdminCard, EmptyRow, FIELD, LABEL, Spinner } from "./ui.tsx";
 
 type CustomerSummary = {
@@ -30,7 +32,14 @@ type CustomerDetail = {
   reviews: { id: string; rating: number; body: string; created_at: string }[];
 };
 
+type CouponSettings = { default_discount_type: "percent" | "flat"; default_discount_value: number; default_scope: "shop" | "booking" | "both"; default_validity_days: number };
+
 const SUGGESTED_TAGS = ["VIP", "Regular", "New", "At Risk"];
+
+function randomCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
 
 async function callCustomers<T>(password: string, query: string, init?: RequestInit): Promise<{ ok: boolean; data: T }> {
   const res = await fetch(`/api/admin-customers${query}`, {
@@ -132,12 +141,112 @@ export default function CustomersTab({ password }: { password: string }) {
   );
 }
 
+function SendCouponDialog({ password, customerId, customerName, onClose }: { password: string; customerId: string; customerName: string; onClose: () => void }) {
+  const [settings, setSettings] = useState<CouponSettings | null>(null);
+  const [code, setCode] = useState(randomCode());
+  const [discountType, setDiscountType] = useState<"percent" | "flat">("percent");
+  const [discountValue, setDiscountValue] = useState("10");
+  const [scope, setScope] = useState<"shop" | "booking" | "both">("both");
+  const [validityDays, setValidityDays] = useState("7");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    void adminApi.list<CouponSettings>(password, "coupon_settings").then(({ ok, data }) => {
+      if (ok && data.row) {
+        setSettings(data.row);
+        setDiscountType(data.row.default_discount_type);
+        setDiscountValue(String(data.row.default_discount_value));
+        setScope(data.row.default_scope);
+        setValidityDays(String(data.row.default_validity_days));
+      }
+    });
+  }, [password]);
+
+  const send = async () => {
+    const value = Number(discountValue);
+    if (!Number.isFinite(value) || value <= 0) {
+      toast.error("Please enter a valid discount value.");
+      return;
+    }
+    setSaving(true);
+    const expiresAt = new Date(Date.now() + Number(validityDays || settings?.default_validity_days || 7) * 24 * 60 * 60 * 1000).toISOString();
+    const { ok, data } = await adminApi.create(password, "coupons", {
+      code,
+      discount_type: discountType,
+      discount_value: value,
+      min_order_amount: 0,
+      per_user_limit: 1,
+      expires_at: expiresAt,
+      is_active: true,
+      user_id: customerId,
+      scope,
+    });
+    setSaving(false);
+    if (!ok) {
+      toast.error(data.error ?? "Could not create coupon");
+      return;
+    }
+    toast.success(`Coupon ${code} sent to ${customerName}. Share it with them on WhatsApp.`);
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogTitle className="font-serif text-2xl">Send Coupon</DialogTitle>
+        <p className="text-sm text-muted-foreground">This coupon works only for {customerName}, once.</p>
+        <div className="grid gap-4 pt-2">
+          <div>
+            <div className="flex items-center justify-between">
+              <label className={LABEL}>Coupon Code</label>
+              <button type="button" onClick={() => setCode(randomCode())} className="text-xs font-medium text-primary hover:underline">Regenerate</button>
+            </div>
+            <input className={`${FIELD} font-mono uppercase`} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={LABEL}>Discount Type</label>
+              <select className={FIELD} value={discountType} onChange={(e) => setDiscountType(e.target.value as "percent" | "flat")}>
+                <option value="percent">% Off</option>
+                <option value="flat">₹ Off</option>
+              </select>
+            </div>
+            <div>
+              <label className={LABEL}>Value</label>
+              <input type="number" min="0" className={FIELD} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className={LABEL}>Where can this be used?</label>
+            <select className={FIELD} value={scope} onChange={(e) => setScope(e.target.value as "shop" | "booking" | "both")}>
+              <option value="both">Shop & Booking</option>
+              <option value="shop">Shop only</option>
+              <option value="booking">Booking only</option>
+            </select>
+          </div>
+          <div>
+            <label className={LABEL}>Valid for (days)</label>
+            <input type="number" min="1" className={FIELD} value={validityDays} onChange={(e) => setValidityDays(e.target.value)} />
+          </div>
+          <div className="flex gap-2">
+            <AdminButton variant="secondary" onClick={onClose} className="flex-1">Cancel</AdminButton>
+            <AdminButton onClick={() => void send()} disabled={saving} className="flex-1">
+              {saving && <Spinner />} <Send className="size-3.5" /> Send Coupon
+            </AdminButton>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: string; id: string; onClose: () => void; onSaved: () => void }) {
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [notes, setNotes] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sendingCoupon, setSendingCoupon] = useState(false);
 
   useEffect(() => {
     void callCustomers<{ customer?: CustomerDetail; error?: string }>(password, `?id=${encodeURIComponent(id)}`).then(({ ok, data }) => {
@@ -178,11 +287,16 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
           <EmptyRow>Loading...</EmptyRow>
         ) : (
           <div className="grid gap-5 pt-2">
-            <div>
-              <p className="font-medium">{detail.profile.full_name}</p>
-              <p className="text-sm text-muted-foreground">#{String(detail.profile.customer_number).padStart(6, "0")} · {detail.profile.phone}</p>
-              {detail.email && <p className="text-sm text-muted-foreground">{detail.email}</p>}
-              <p className="text-sm text-muted-foreground">{detail.profile.city}, {detail.profile.state}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-medium">{detail.profile.full_name}</p>
+                <p className="text-sm text-muted-foreground">#{String(detail.profile.customer_number).padStart(6, "0")} · {detail.profile.phone}</p>
+                {detail.email && <p className="text-sm text-muted-foreground">{detail.email}</p>}
+                <p className="text-sm text-muted-foreground">{detail.profile.city}, {detail.profile.state}</p>
+              </div>
+              <AdminButton variant="secondary" onClick={() => setSendingCoupon(true)} className="shrink-0">
+                <Send className="size-3.5" /> Send Coupon
+              </AdminButton>
             </div>
 
             <div>
@@ -273,6 +387,10 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
               </AdminButton>
             </div>
           </div>
+        )}
+
+        {sendingCoupon && detail && (
+          <SendCouponDialog password={password} customerId={detail.profile.id} customerName={detail.profile.full_name} onClose={() => setSendingCoupon(false)} />
         )}
       </DialogContent>
     </Dialog>
