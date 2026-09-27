@@ -2,8 +2,10 @@
 //   GET  /api/booking?date=YYYY-MM-DD -> { slots: ["10:00", ...] } free slots for that day
 //   POST /api/booking                 -> creates the booking (customer must be signed in)
 // The service must be an active service from Admin > Services, and the time must be a free
-// slot from Admin > Booking Settings. Env vars: SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL,
-// RESEND_API_KEY (optional).
+// slot from Admin > Booking Settings. A coupon code (general or a personal one issued to this
+// customer, scope "booking" or "both") can be attached - the discount is shown as a note for
+// the studio to apply manually, since bookings don't take online payment. Env vars:
+// SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, RESEND_API_KEY (optional).
 import { dbFetch, getEnv, getUserId, q, type ApiRequest, type ApiResponse } from "./_lib/db.js";
 import { bookingVars, sendTemplateEmail } from "./_lib/email.js";
 import { freeSlots, loadSettings } from "./_lib/slots.js";
@@ -18,10 +20,55 @@ type Body = {
   message?: string;
   locationType?: string;
   locationAddress?: string;
+  couponCode?: string;
+};
+
+type CouponRow = {
+  id: string;
+  code: string;
+  discount_type: "percent" | "flat";
+  discount_value: number;
+  max_discount: number | null;
+  is_active: boolean;
+  user_id: string | null;
+  scope: "shop" | "booking" | "both";
+  starts_at: string | null;
+  expires_at: string | null;
 };
 
 const nowIst = () => new Date(Date.now() + 330 * 60 * 1000);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Validates a coupon for use on a booking: must exist, be active, in scope, in date range, and
+// - if personal - belong to this customer. Bookings have no price to discount from server-side
+// (studio sets prices per-service), so this just returns a human note for the studio to see.
+async function resolveBookingCoupon(
+  env: { supabaseUrl: string; serviceKey: string },
+  code: string,
+  userId: string,
+): Promise<{ code: string; note: string } | { error: string }> {
+  const r = await dbFetch(env.supabaseUrl, env.serviceKey, `coupons?code=eq.${encodeURIComponent(code)}&select=*`);
+  const coupon = ((await r.json()) as CouponRow[])[0];
+  if (!coupon || !coupon.is_active) return { error: "That coupon code isn't valid." };
+  if (coupon.user_id && coupon.user_id !== userId) return { error: "That coupon code isn't valid." };
+  if (coupon.scope === "shop") return { error: "That coupon can only be used in the shop, not for bookings." };
+  const now = Date.now();
+  if (coupon.starts_at && new Date(coupon.starts_at).getTime() > now) return { error: "That coupon isn't active yet." };
+  if (coupon.expires_at && new Date(coupon.expires_at).getTime() < now) return { error: "That coupon has expired." };
+
+  if (coupon.user_id) {
+    const usedRes = await dbFetch(
+      env.supabaseUrl, env.serviceKey,
+      `coupon_redemptions?coupon_id=eq.${coupon.id}&user_id=eq.${userId}&select=id`,
+      { headers: { Prefer: "count=exact", Range: "0-0" } },
+    );
+    const used = parseInt(usedRes.headers.get("content-range")?.split("/")[1] ?? "0", 10) || 0;
+    if (used >= 1) return { error: "You've already used this coupon." };
+  }
+
+  const note = coupon.discount_type === "percent" ? `${coupon.discount_value}% off` : `₹${coupon.discount_value} off`;
+  return { code: coupon.code, note: `Coupon ${coupon.code}: ${note}${coupon.max_discount ? ` (max ₹${coupon.max_discount})` : ""} - apply at the studio.` };
+}
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   const env = getEnv();
@@ -97,6 +144,18 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return;
     }
 
+    let couponCode: string | null = null;
+    let discountNote: string | null = null;
+    let couponError: string | null = null;
+    if (typeof b.couponCode === "string" && b.couponCode.trim()) {
+      const result = await resolveBookingCoupon(env, b.couponCode.trim().toUpperCase(), userId);
+      if ("error" in result) couponError = result.error;
+      else {
+        couponCode = result.code;
+        discountNote = result.note;
+      }
+    }
+
     const r = await dbFetch(env.supabaseUrl, env.serviceKey, "rpc/create_booking", {
       method: "POST",
       body: JSON.stringify({
@@ -116,15 +175,31 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       res.status(400).json({ error: "Could not send your booking request. Please try again." });
       return;
     }
-    // Link the booking to the signed-in customer (used later for reviews and profiles).
-    await dbFetch(env.supabaseUrl, env.serviceKey, `bookings?booking_number=eq.${bookingNumber}`, {
+    // Link the booking to the signed-in customer (used later for reviews and profiles), and
+    // attach the coupon note if one was applied.
+    const bookingPatchRes = await dbFetch(env.supabaseUrl, env.serviceKey, `bookings?booking_number=eq.${bookingNumber}&select=id`, {
       method: "PATCH",
-      body: JSON.stringify({ user_id: userId }),
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ user_id: userId, coupon_code: couponCode, discount_note: discountNote }),
     });
+    const updatedBooking = ((await bookingPatchRes.json().catch(() => [])) as { id: string }[])[0];
+
+    if (couponCode && updatedBooking) {
+      const couponRes = await dbFetch(env.supabaseUrl, env.serviceKey, `coupons?code=eq.${encodeURIComponent(couponCode)}&select=id`);
+      const coupon = ((await couponRes.json()) as { id: string }[])[0];
+      if (coupon) {
+        await dbFetch(env.supabaseUrl, env.serviceKey, "coupon_redemptions", {
+          method: "POST",
+          headers: { Prefer: "return=minimal,resolution=ignore-duplicates" },
+          body: JSON.stringify({ coupon_id: coupon.id, user_id: userId, booking_id: updatedBooking.id, discount_amount: 0 }),
+        }).catch(() => null);
+      }
+    }
+
     await sendTemplateEmail(env, "admin_new_booking", null, bookingVars({
       booking_number: bookingNumber, name, phone, service: b.service, preferred_date: b.date, preferred_time: time, message,
     }));
-    res.status(200).json({ bookingNumber });
+    res.status(200).json({ bookingNumber, couponApplied: couponCode, couponError });
   } catch {
     res.status(500).json({ error: "Could not send your booking request. Please try again." });
   }
