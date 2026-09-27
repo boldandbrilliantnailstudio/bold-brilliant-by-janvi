@@ -11,7 +11,6 @@ import { Skeleton } from "@/components/ui/skeleton.tsx";
 import CheckoutDialog from "./checkout-dialog.tsx";
 import CustomRequestDialog from "./custom-request-dialog.tsx";
 import PromoBanner from "./promo-banner.tsx";
-import ProductDetailDialog from "./product-detail-dialog.tsx";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1610992015762-45dca7fa3a85?fm=webp&q=70&fit=crop&w=500&h=625";
 
@@ -62,7 +61,6 @@ export default function Shop() {
   const [tab, setTab] = useState<"ready" | "custom">("ready");
   const [checkout, setCheckout] = useState<CheckoutOrder | null>(null);
   const [customSet, setCustomSet] = useState<string | null>(null);
-  const [viewing, setViewing] = useState<Product | null>(null);
   const { add } = useCart();
   const products = useProducts();
   const settings = useSiteSettings();
@@ -75,7 +73,6 @@ export default function Shop() {
 
   const buyNow = (p: Product) => {
     if (p.soldOut) return;
-    setViewing(null);
     setCheckout({ items: [{ name: p.name, qty: 1, price: p.price, img: p.imageUrl ?? FALLBACK_IMG }], title: p.name, total: p.price });
   };
 
@@ -111,8 +108,8 @@ export default function Shop() {
               {products.map((p, i) => (
                 <Reveal key={p.id} delay={i * 0.06}>
                   <div className="group relative overflow-hidden rounded-3xl border bg-card/70 backdrop-blur transition-all duration-500 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/10">
-                    <button
-                      onClick={() => setViewing(p)}
+                    <a
+                      href={`/shop/${p.slug}`}
                       aria-label={`View ${p.name} details`}
                       className="relative block aspect-square w-full cursor-pointer overflow-hidden bg-muted"
                     >
@@ -122,11 +119,11 @@ export default function Shop() {
                           Sold Out
                         </span>
                       )}
-                    </button>
+                    </a>
                     <div className="p-4">
-                      <button onClick={() => setViewing(p)} className="text-left">
+                      <a href={`/shop/${p.slug}`} className="text-left">
                         <h3 className="font-serif text-lg leading-tight hover:underline">{p.name}</h3>
-                      </button>
+                      </a>
                       <p className="pt-1 text-sm font-medium text-primary">
                         ₹{p.price}
                         {p.compareAtPrice && p.compareAtPrice > p.price && (
@@ -169,7 +166,6 @@ export default function Shop() {
         </Reveal>
       </div>
 
-      {viewing && <ProductDetailDialog product={viewing} onClose={() => setViewing(null)} onBuyNow={buyNow} />}
       {checkout && <CheckoutDialog order={checkout} onClose={() => setCheckout(null)} />}
       {customSet && <CustomRequestDialog setName={customSet} onClose={() => setCustomSet(null)} />}
     </section>
