@@ -11,6 +11,7 @@ import BackToTop from "./_components/back-to-top.tsx";
 import BottomNav from "./_components/bottom-nav.tsx";
 import PromoBanner from "./_components/promo-banner.tsx";
 import PopupBanner from "./_components/popup-banner.tsx";
+import ReviewPromptPopup from "./_components/review-prompt-popup.tsx";
 
 // Shop, Book, My Orders and Founder each live on their own page now - see src/pages/Shop.tsx,
 // Book.tsx, Orders.tsx and Founder.tsx - so they no longer render here.
@@ -32,6 +33,7 @@ export default function Index() {
       <BackToTop />
       <BottomNav />
       <PopupBanner />
+      <ReviewPromptPopup />
     </>
   );
 }
