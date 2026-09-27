@@ -1,10 +1,11 @@
 // Customer profiles admin tab (Hissa 6): search customers, see their spend/order/booking/review
-// history at a glance, and open a detail view with private admin notes, tags, and a "Send
-// Coupon" action that creates a personal coupon for that customer (Hissa 7). Backed by
-// api/admin-customers.ts (separate from the generic adminApi since it aggregates across tables).
+// history at a glance, and open a detail view with private admin notes, tags, a "Send Coupon"
+// action (Hissa 7), and a "Send Message" action for ad-hoc email/WhatsApp using the template
+// library from Admin > Message Templates (Hissa 8). Backed by api/admin-customers.ts and
+// api/admin-send-message.ts (separate from the generic adminApi since they aggregate/reach out).
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Search, Send, Star, Tag, User, X } from "lucide-react";
+import { Mail, MessageCircle, Search, Send, Star, Tag, User, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog.tsx";
 import { adminApi } from "./api.ts";
 import { AdminButton, AdminCard, EmptyRow, FIELD, LABEL, Spinner } from "./ui.tsx";
@@ -33,6 +34,7 @@ type CustomerDetail = {
 };
 
 type CouponSettings = { default_discount_type: "percent" | "flat"; default_discount_value: number; default_scope: "shop" | "booking" | "both"; default_validity_days: number };
+type MessageTemplate = { id: string; channel: "email" | "whatsapp"; name: string; subject: string | null; body: string };
 
 const SUGGESTED_TAGS = ["VIP", "Regular", "New", "At Risk"];
 
@@ -41,8 +43,22 @@ function randomCode(): string {
   return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
+// Fills {{name}}, {{coupon}} and any other placeholder into a subject/body for previewing and
+// sending ad-hoc messages - kept in sync with api/_lib/email.ts's fillTemplate on the server.
+function fillPlaceholders(text: string, vars: Record<string, string>): string {
+  return text.replace(/\{\{(\w+)\}\}/g, (match, key: string) => (key in vars ? vars[key] : match));
+}
+
 async function callCustomers<T>(password: string, query: string, init?: RequestInit): Promise<{ ok: boolean; data: T }> {
   const res = await fetch(`/api/admin-customers${query}`, {
+    ...init,
+    headers: { ...(init?.headers ?? {}), "x-admin-password": password, "Content-Type": "application/json" },
+  });
+  return { ok: res.ok, data: (await res.json()) as T };
+}
+
+async function callSendMessage<T>(password: string, query: string, init?: RequestInit): Promise<{ ok: boolean; data: T }> {
+  const res = await fetch(`/api/admin-send-message${query}`, {
     ...init,
     headers: { ...(init?.headers ?? {}), "x-admin-password": password, "Content-Type": "application/json" },
   });
@@ -186,7 +202,7 @@ function SendCouponDialog({ password, customerId, customerName, onClose }: { pas
       toast.error(data.error ?? "Could not create coupon");
       return;
     }
-    toast.success(`Coupon ${code} sent to ${customerName}. Share it with them on WhatsApp.`);
+    toast.success(`Coupon ${code} created for ${customerName}. Use Send Message to share it.`);
     onClose();
   };
 
@@ -231,8 +247,165 @@ function SendCouponDialog({ password, customerId, customerName, onClose }: { pas
           <div className="flex gap-2">
             <AdminButton variant="secondary" onClick={onClose} className="flex-1">Cancel</AdminButton>
             <AdminButton onClick={() => void send()} disabled={saving} className="flex-1">
-              {saving && <Spinner />} <Send className="size-3.5" /> Send Coupon
+              {saving && <Spinner />} <Send className="size-3.5" /> Create Coupon
             </AdminButton>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Send Message dialog (Hissa 8): pick an email or WhatsApp template (or write from scratch),
+// fill in {{name}}/{{coupon}}, preview, then send the email directly or open WhatsApp with the
+// message pre-filled (WhatsApp has no server-side send API without a paid business account, so
+// this opens wa.me with the text ready to go, and logs it for the customer's history).
+function SendMessageDialog({
+  password,
+  customerId,
+  customerName,
+  customerPhone,
+  customerEmail,
+  onClose,
+}: {
+  password: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string | null;
+  onClose: () => void;
+}) {
+  const [channel, setChannel] = useState<"email" | "whatsapp">(customerEmail ? "email" : "whatsapp");
+  const [templates, setTemplates] = useState<MessageTemplate[] | null>(null);
+  const [templateId, setTemplateId] = useState<string>("blank");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [coupon, setCoupon] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    void callSendMessage<{ templates?: MessageTemplate[]; error?: string }>(password, `?resource=templates&channel=${channel}`).then(({ ok, data }) => {
+      if (ok) setTemplates(data.templates ?? []);
+    });
+    setTemplateId("blank");
+    setSubject("");
+    setBody("");
+  }, [password, channel]);
+
+  const applyTemplate = (id: string) => {
+    setTemplateId(id);
+    const tpl = templates?.find((t) => t.id === id);
+    setSubject(tpl?.subject ?? "");
+    setBody(tpl?.body ?? "");
+  };
+
+  const vars = { name: customerName, coupon: coupon || "(no coupon)" };
+  const filledSubject = fillPlaceholders(subject, vars);
+  const filledBody = fillPlaceholders(body, vars);
+
+  const sendEmail = async () => {
+    if (!customerEmail) {
+      toast.error("This customer has no email on file.");
+      return;
+    }
+    if (!filledSubject.trim() || !filledBody.trim()) {
+      toast.error("Please fill in the subject and message.");
+      return;
+    }
+    setSending(true);
+    const { ok, data } = await callSendMessage<{ error?: string }>(password, "?action=send-email", {
+      method: "POST",
+      body: JSON.stringify({ userId: customerId, subject: filledSubject, html: filledBody }),
+    });
+    setSending(false);
+    if (!ok) {
+      toast.error(data.error ?? "Could not send email");
+      return;
+    }
+    toast.success(`Email sent to ${customerEmail}`);
+    onClose();
+  };
+
+  const sendWhatsapp = async () => {
+    if (!filledBody.trim()) {
+      toast.error("Please write a message.");
+      return;
+    }
+    const digits = customerPhone.replace(/\D/g, "");
+    const waNumber = digits.length === 10 ? `91${digits}` : digits;
+    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(filledBody)}`, "_blank");
+    await callSendMessage(password, "?action=log-whatsapp", { method: "POST", body: JSON.stringify({ userId: customerId, body: filledBody }) }).catch(() => null);
+    toast.success("WhatsApp opened with your message ready to send.");
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        <DialogTitle className="font-serif text-2xl">Send Message to {customerName}</DialogTitle>
+        <div className="grid gap-4 pt-2">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setChannel("email")}
+              className={`flex-1 rounded-xl border-2 p-2 text-sm font-medium ${channel === "email" ? "border-primary bg-primary/5" : "border-input"}`}
+            >
+              <Mail className="mx-auto mb-1 size-4" /> Email {!customerEmail && "(no email)"}
+            </button>
+            <button
+              onClick={() => setChannel("whatsapp")}
+              className={`flex-1 rounded-xl border-2 p-2 text-sm font-medium ${channel === "whatsapp" ? "border-primary bg-primary/5" : "border-input"}`}
+            >
+              <MessageCircle className="mx-auto mb-1 size-4" /> WhatsApp
+            </button>
+          </div>
+
+          <div>
+            <label className={LABEL}>Template</label>
+            <select className={FIELD} value={templateId} onChange={(e) => applyTemplate(e.target.value)}>
+              <option value="blank">Write from scratch</option>
+              {templates?.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className={LABEL}>Coupon code to insert (optional, fills {"{{coupon}}"})</label>
+            <input className={`${FIELD} font-mono uppercase`} value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="e.g. WELCOME10" />
+          </div>
+
+          {channel === "email" && (
+            <div>
+              <label className={LABEL}>Subject</label>
+              <input className={FIELD} value={subject} onChange={(e) => setSubject(e.target.value)} />
+            </div>
+          )}
+          <div>
+            <label className={LABEL}>Message {channel === "email" ? "(HTML)" : ""}</label>
+            <textarea className={`${FIELD} h-32 py-2 ${channel === "email" ? "font-mono text-xs" : ""}`} value={body} onChange={(e) => setBody(e.target.value)} />
+          </div>
+
+          <div className="rounded-xl border bg-muted/40 p-3">
+            <p className={LABEL}>Preview</p>
+            {channel === "email" && <p className="pb-1 text-sm font-medium">{filledSubject}</p>}
+            {channel === "email" ? (
+              <div className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: filledBody }} />
+            ) : (
+              <p className="whitespace-pre-wrap text-sm text-muted-foreground">{filledBody}</p>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <AdminButton variant="secondary" onClick={onClose} className="flex-1">Cancel</AdminButton>
+            {channel === "email" ? (
+              <AdminButton onClick={() => void sendEmail()} disabled={sending || !customerEmail} className="flex-1">
+                {sending && <Spinner />} <Mail className="size-3.5" /> Send Email
+              </AdminButton>
+            ) : (
+              <AdminButton onClick={() => void sendWhatsapp()} className="flex-1">
+                <MessageCircle className="size-3.5" /> Open WhatsApp
+              </AdminButton>
+            )}
           </div>
         </div>
       </DialogContent>
@@ -247,6 +420,7 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
   const [customTag, setCustomTag] = useState("");
   const [saving, setSaving] = useState(false);
   const [sendingCoupon, setSendingCoupon] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
     void callCustomers<{ customer?: CustomerDetail; error?: string }>(password, `?id=${encodeURIComponent(id)}`).then(({ ok, data }) => {
@@ -294,9 +468,14 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
                 {detail.email && <p className="text-sm text-muted-foreground">{detail.email}</p>}
                 <p className="text-sm text-muted-foreground">{detail.profile.city}, {detail.profile.state}</p>
               </div>
-              <AdminButton variant="secondary" onClick={() => setSendingCoupon(true)} className="shrink-0">
-                <Send className="size-3.5" /> Send Coupon
-              </AdminButton>
+              <div className="flex shrink-0 flex-col gap-2">
+                <AdminButton variant="secondary" onClick={() => setSendingMessage(true)}>
+                  <MessageCircle className="size-3.5" /> Send Message
+                </AdminButton>
+                <AdminButton variant="secondary" onClick={() => setSendingCoupon(true)}>
+                  <Send className="size-3.5" /> Send Coupon
+                </AdminButton>
+              </div>
             </div>
 
             <div>
@@ -391,6 +570,16 @@ function CustomerDetailDialog({ password, id, onClose, onSaved }: { password: st
 
         {sendingCoupon && detail && (
           <SendCouponDialog password={password} customerId={detail.profile.id} customerName={detail.profile.full_name} onClose={() => setSendingCoupon(false)} />
+        )}
+        {sendingMessage && detail && (
+          <SendMessageDialog
+            password={password}
+            customerId={detail.profile.id}
+            customerName={detail.profile.full_name}
+            customerPhone={detail.profile.phone}
+            customerEmail={detail.email}
+            onClose={() => setSendingMessage(false)}
+          />
         )}
       </DialogContent>
     </Dialog>
