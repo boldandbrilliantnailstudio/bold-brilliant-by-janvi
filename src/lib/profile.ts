@@ -54,9 +54,13 @@ export const EMPTY_PROFILE: ProfileValues = {
   gstin: "",
 };
 
+// Formats the DB customer_number as a 6-digit code shown across the site, e.g. 100482.
+export const formatCustomerId = (n: number) => String(n).padStart(6, "0");
+
 // Shape of a row in the Supabase `profiles` table.
 export type ProfileRow = {
   id: string;
+  customer_number: number;
   full_name: string;
   phone: string;
   alt_phone: string | null;
@@ -93,6 +97,9 @@ export const fromRow = (r: ProfileRow): ProfileValues => ({
 
 export const toRow = (id: string, v: ProfileValues): ProfileRow => ({
   id,
+  // A new row lets the database assign the next customer_number (sequence default).
+  // Existing rows keep their number, but we still need a placeholder value for the type.
+  customer_number: 0,
   full_name: v.fullName,
   phone: v.phone,
   alt_phone: v.altPhone || null,
