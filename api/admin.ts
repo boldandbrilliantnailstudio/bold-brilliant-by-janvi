@@ -93,6 +93,8 @@ const RESOURCES: Record<string, Resource> = {
       "maps_url", "address", "hours", "delivery_note", "hero_video_url", "showcase_video_url",
       "poster_url", "gstin", "show_whatsapp", "show_instagram", "show_facebook", "show_youtube",
       "show_x", "show_telegram", "booking_confirm_message",
+      "show_footer_email", "show_footer_whatsapp", "show_footer_phone", "show_footer_address",
+      "show_footer_maps", "show_footer_hours",
     ],
     singleton: true,
   },
