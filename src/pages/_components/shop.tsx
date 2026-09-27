@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton.tsx";
 import CheckoutDialog from "./checkout-dialog.tsx";
 import CustomRequestDialog from "./custom-request-dialog.tsx";
 import PromoBanner from "./promo-banner.tsx";
+import ProductDetailDialog from "./product-detail-dialog.tsx";
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1610992015762-45dca7fa3a85?fm=webp&q=70&fit=crop&w=500&h=625";
 
@@ -61,6 +62,7 @@ export default function Shop() {
   const [tab, setTab] = useState<"ready" | "custom">("ready");
   const [checkout, setCheckout] = useState<CheckoutOrder | null>(null);
   const [customSet, setCustomSet] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Product | null>(null);
   const { add } = useCart();
   const products = useProducts();
   const settings = useSiteSettings();
@@ -73,6 +75,7 @@ export default function Shop() {
 
   const buyNow = (p: Product) => {
     if (p.soldOut) return;
+    setViewing(null);
     setCheckout({ items: [{ name: p.name, qty: 1, price: p.price, img: p.imageUrl ?? FALLBACK_IMG }], title: p.name, total: p.price });
   };
 
@@ -108,16 +111,22 @@ export default function Shop() {
               {products.map((p, i) => (
                 <Reveal key={p.id} delay={i * 0.06}>
                   <div className="group relative overflow-hidden rounded-3xl border bg-card/70 backdrop-blur transition-all duration-500 hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary/10">
-                    <div className="relative aspect-square overflow-hidden bg-muted">
+                    <button
+                      onClick={() => setViewing(p)}
+                      aria-label={`View ${p.name} details`}
+                      className="relative block aspect-square w-full cursor-pointer overflow-hidden bg-muted"
+                    >
                       <img src={p.imageUrl ?? FALLBACK_IMG} alt={`${p.name} press-on nail set`} loading="lazy" className={`h-full w-full object-cover transition-transform duration-700 group-hover:scale-110 ${p.soldOut ? "opacity-50" : ""}`} />
                       {p.soldOut && (
                         <span className="absolute left-3 top-3 rounded-full bg-foreground px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-background">
                           Sold Out
                         </span>
                       )}
-                    </div>
+                    </button>
                     <div className="p-4">
-                      <h3 className="font-serif text-lg leading-tight">{p.name}</h3>
+                      <button onClick={() => setViewing(p)} className="text-left">
+                        <h3 className="font-serif text-lg leading-tight hover:underline">{p.name}</h3>
+                      </button>
                       <p className="pt-1 text-sm font-medium text-primary">
                         ₹{p.price}
                         {p.compareAtPrice && p.compareAtPrice > p.price && (
@@ -160,6 +169,7 @@ export default function Shop() {
         </Reveal>
       </div>
 
+      {viewing && <ProductDetailDialog product={viewing} onClose={() => setViewing(null)} onBuyNow={buyNow} />}
       {checkout && <CheckoutDialog order={checkout} onClose={() => setCheckout(null)} />}
       {customSet && <CustomRequestDialog setName={customSet} onClose={() => setCustomSet(null)} />}
     </section>
