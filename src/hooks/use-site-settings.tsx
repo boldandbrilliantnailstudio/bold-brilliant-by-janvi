@@ -34,6 +34,13 @@ export type SiteSettingsValues = {
   showYoutube: boolean;
   showX: boolean;
   showTelegram: boolean;
+  // Footer "Contact" block switches (separate from the floating social icons).
+  showFooterEmail: boolean;
+  showFooterWhatsapp: boolean;
+  showFooterPhone: boolean;
+  showFooterAddress: boolean;
+  showFooterMaps: boolean;
+  showFooterHours: boolean;
 };
 
 const DEFAULTS: SiteSettingsValues = {
@@ -64,6 +71,12 @@ const DEFAULTS: SiteSettingsValues = {
   showYoutube: false,
   showX: false,
   showTelegram: false,
+  showFooterEmail: true,
+  showFooterWhatsapp: true,
+  showFooterPhone: true,
+  showFooterAddress: true,
+  showFooterMaps: true,
+  showFooterHours: true,
 };
 
 type Row = {
@@ -94,6 +107,12 @@ type Row = {
   show_youtube: boolean | null;
   show_x: boolean | null;
   show_telegram: boolean | null;
+  show_footer_email: boolean | null;
+  show_footer_whatsapp: boolean | null;
+  show_footer_phone: boolean | null;
+  show_footer_address: boolean | null;
+  show_footer_maps: boolean | null;
+  show_footer_hours: boolean | null;
 };
 
 function fromRow(r: Row): SiteSettingsValues {
@@ -126,6 +145,12 @@ function fromRow(r: Row): SiteSettingsValues {
     showYoutube: r.show_youtube ?? false,
     showX: r.show_x ?? false,
     showTelegram: r.show_telegram ?? false,
+    showFooterEmail: r.show_footer_email ?? true,
+    showFooterWhatsapp: r.show_footer_whatsapp ?? true,
+    showFooterPhone: r.show_footer_phone ?? true,
+    showFooterAddress: r.show_footer_address ?? true,
+    showFooterMaps: r.show_footer_maps ?? true,
+    showFooterHours: r.show_footer_hours ?? true,
   };
 }
 
