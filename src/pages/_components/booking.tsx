@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarCheck, CheckCircle2, MapPin } from "lucide-react";
+import { CalendarCheck, CheckCircle2, LogIn, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Label } from "@/components/ui/label.tsx";
 import Reveal, { SectionHeading } from "@/components/reveal.tsx";
 import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/use-site-settings.tsx";
+import { useProfile } from "@/hooks/use-profile.ts";
+import { supabase } from "@/lib/supabase.ts";
 
 const SERVICES = ["Classic Nail Art", "French Nails", "3D Nail Art", "Bridal Nails", "Luxury Nail Art", "Custom Design"] as const;
 const LOCATION_TYPES = ["studio", "home"] as const;
@@ -71,24 +73,67 @@ function BookingSummary({ booking, studioAddress, onDone }: { booking: Confirmed
   );
 }
 
+// Shown instead of the form when signed out. Sign-in keeps the customer on this page,
+// so the form appears right after they log in.
+function SignInGate({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-4 rounded-[2rem] border bg-card/60 p-8 text-center shadow-2xl shadow-primary/10 backdrop-blur-sm md:p-12">
+      <LogIn className="size-10 text-primary" />
+      <h3 className="font-serif text-2xl">Sign in to book</h3>
+      <p className="max-w-sm text-sm text-muted-foreground">Use the same account as the shop. Your name, phone and email will be filled in automatically.</p>
+      <button onClick={onSignIn} className="h-12 cursor-pointer rounded-full bg-primary px-8 font-medium text-primary-foreground transition-transform hover:scale-[1.02]">
+        Sign In
+      </button>
+    </div>
+  );
+}
+
 export default function Booking() {
   const today = new Date().toISOString().slice(0, 10);
   const settings = useSiteSettings();
+  const { isSignedIn, profile, openProfile } = useProfile();
+  const [email, setEmail] = useState("");
   const [confirmed, setConfirmed] = useState<Confirmed | null>(null);
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { locationType: "studio" } });
   const locationType = watch("locationType");
 
+  // Sign-in email comes from the auth session, not the profile.
+  useEffect(() => {
+    if (!isSignedIn || !supabase) return;
+    void supabase.auth.getSession().then(({ data }) => setEmail(data.session?.user.email ?? ""));
+  }, [isSignedIn]);
+
+  // Autofill empty fields from the saved profile, without overwriting what the customer typed.
+  useEffect(() => {
+    const fill = (k: "name" | "phone" | "email", v: string) => {
+      if (v && !getValues(k)) setValue(k, v);
+    };
+    if (profile) {
+      fill("name", profile.fullName);
+      fill("phone", profile.phone ? `+91 ${profile.phone}` : "");
+    }
+    fill("email", email);
+  }, [profile, email, getValues, setValue]);
+
   // Booking goes to /api/booking, which saves it to Admin > Bookings and emails the owner.
   const onSubmit = async (d: FormValues) => {
+    const token = supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
+    if (!token) {
+      toast.error("Please sign in to book.");
+      openProfile();
+      return;
+    }
     const res = await fetch("/api/booking", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         ...d,
         email: d.email?.trim() || undefined,
@@ -102,7 +147,7 @@ export default function Booking() {
       return;
     }
     setConfirmed({ ...d, bookingNumber: data.bookingNumber });
-    reset();
+    reset({ locationType: "studio", name: d.name, phone: d.phone, email: d.email });
   };
 
   const err = (k: keyof FormValues) => errors[k] && <p className="pt-1 text-xs text-destructive">{errors[k]?.message}</p>;
@@ -114,7 +159,9 @@ export default function Booking() {
       <div className="relative mx-auto max-w-3xl">
         <SectionHeading eyebrow="Appointments" title="Book Your Nail Appointment" sub="Fill in your details and we'll confirm your slot." />
         <Reveal>
-          {confirmed ? (
+          {!isSignedIn ? (
+            <SignInGate onSignIn={() => openProfile()} />
+          ) : confirmed ? (
             <BookingSummary booking={confirmed} studioAddress={settings.address} onDone={() => setConfirmed(null)} />
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-5 rounded-[2rem] border bg-card/60 p-6 shadow-2xl shadow-primary/10 backdrop-blur-sm sm:grid-cols-2 md:p-10">
