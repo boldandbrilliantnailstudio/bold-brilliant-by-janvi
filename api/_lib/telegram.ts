@@ -95,6 +95,43 @@ export async function notifyNewRequest(r: CustomRequestRow): Promise<void> {
   }
 }
 
+export type LowRatingReviewAlert = {
+  customerName: string;
+  rating: number;
+  body: string;
+  targetLabel: string; // e.g. "product: Nude Glaze Set" or "studio visit"
+  whatsapp: string | null;
+};
+
+// Alerts the studio owner immediately whenever a customer leaves a 1 or 2 star review, so they
+// can follow up on WhatsApp before it's seen by other customers (reviews now publish instantly).
+export async function notifyLowRatingReview(r: LowRatingReviewAlert): Promise<void> {
+  const cfg = telegramConfig();
+  if (!cfg?.chatId) return;
+  try {
+    const stars = "\u2b50".repeat(r.rating);
+    const lines = [
+      `<b>\u26a0\ufe0f Low rating review (${stars})</b>`,
+      "",
+      `<b>From:</b> ${escapeHtml(r.customerName)}`,
+      `<b>About:</b> ${escapeHtml(r.targetLabel)}`,
+      "",
+      escapeHtml(r.body),
+    ];
+    const replyMarkup = r.whatsapp
+      ? { inline_keyboard: [[{ text: "Reply on WhatsApp", url: `https://wa.me/${waNumber(r.whatsapp)}` }]] }
+      : undefined;
+    await tg(cfg.token, "sendMessage", {
+      chat_id: cfg.chatId,
+      text: lines.join("\n"),
+      parse_mode: "HTML",
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+    });
+  } catch {
+    // ignore - a Telegram problem must never fail the customer's review submission
+  }
+}
+
 // Called from the admin panel's "Connect Telegram" button: points the bot at this website and,
 // once the chat ID is set, sends a test message.
 export async function connectTelegram(host: string | undefined): Promise<{ ok: boolean; message: string }> {
