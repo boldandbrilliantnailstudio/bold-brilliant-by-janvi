@@ -12,9 +12,20 @@ import Reveal, { SectionHeading } from "@/components/reveal.tsx";
 import ProfileForm from "@/components/profile/profile-form.tsx";
 import SignInDialog from "./sign-in-dialog.tsx";
 
+function AvatarCircle({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} alt={name} className="size-14 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />;
+  }
+  return (
+    <div className="grid size-14 shrink-0 place-items-center rounded-full bg-primary font-serif text-2xl font-semibold text-primary-foreground">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 export default function Profile() {
   const { user, isSignedIn, loading } = useCustomerAuth();
-  const { profile, profileLoading, saveProfile, signOut } = useProfile();
+  const { profile, profileLoading, saveProfile, signOut, customerId, avatarUrl } = useProfile();
   const [editing, setEditing] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
 
@@ -76,12 +87,11 @@ export default function Profile() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-4 rounded-[2rem] border bg-card/60 p-6 shadow-2xl shadow-primary/10 backdrop-blur-sm">
-                <div className="grid size-14 shrink-0 place-items-center rounded-full bg-primary font-serif text-2xl font-semibold text-primary-foreground">
-                  {profile.fullName.charAt(0).toUpperCase()}
-                </div>
+                <AvatarCircle name={profile.fullName} avatarUrl={avatarUrl} />
                 <div className="min-w-0">
                   <p className="truncate font-serif text-2xl">{profile.fullName}</p>
                   {user?.email && <p className="truncate text-sm text-muted-foreground">{user.email}</p>}
+                  {customerId && <p className="truncate text-xs text-muted-foreground">Customer ID: {customerId}</p>}
                 </div>
               </div>
 
