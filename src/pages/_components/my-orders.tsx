@@ -23,19 +23,17 @@ type Order = {
   created_at: string;
 };
 
-type ReviewStatus = { orderId: string; isPublished: boolean };
-
 export default function MyOrders() {
   const { user, isSignedIn, loading } = useCustomerAuth();
   const { profile, openProfile } = useProfile();
   const [orders, setOrders] = useState<Order[] | null>(null);
-  const [reviewedOrders, setReviewedOrders] = useState<ReviewStatus[]>([]);
+  const [reviewedOrderIds, setReviewedOrderIds] = useState<string[]>([]);
   const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     if (!supabase || !user) {
       setOrders(null);
-      setReviewedOrders([]);
+      setReviewedOrderIds([]);
       return;
     }
     supabase
@@ -45,11 +43,11 @@ export default function MyOrders() {
       .then(({ data }) => setOrders((data as Order[] | null) ?? []));
     supabase
       .from("reviews")
-      .select("order_id, is_published")
+      .select("order_id")
       .not("order_id", "is", null)
       .then(({ data }) => {
-        const rows = data as { order_id: string; is_published: boolean }[] | null;
-        setReviewedOrders((rows ?? []).map((r) => ({ orderId: r.order_id, isPublished: r.is_published })));
+        const rows = data as { order_id: string }[] | null;
+        setReviewedOrderIds((rows ?? []).map((r) => r.order_id));
       });
   }, [user]);
 
@@ -119,7 +117,7 @@ export default function MyOrders() {
           ) : (
             <div className="space-y-4">
               {orders.map((o) => {
-                const review = reviewedOrders.find((r) => r.orderId === o.id);
+                const reviewed = reviewedOrderIds.includes(o.id);
                 return (
                   <div key={o.id} className="flex flex-col gap-3 rounded-3xl border bg-card/70 p-5 backdrop-blur">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -148,10 +146,9 @@ export default function MyOrders() {
                     {o.tracking_number && <ShipmentJourney orderId={o.id} />}
                     {o.status === "Delivered" && (
                       <div className="pt-1">
-                        {review ? (
+                        {reviewed ? (
                           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Star className="size-3.5 fill-primary text-primary" />
-                            {review.isPublished ? "Your review is published" : "Your review is awaiting approval"}
+                            <Star className="size-3.5 fill-primary text-primary" /> You reviewed this order
                           </p>
                         ) : (
                           <button
@@ -178,9 +175,8 @@ export default function MyOrders() {
           orderId={reviewOrder.id}
           productName={reviewOrder.product_name}
           customerName={profile?.fullName ?? user.email ?? "Customer"}
-          userId={user.id}
           onSubmitted={() => {
-            setReviewedOrders((prev) => [...prev, { orderId: reviewOrder.id, isPublished: false }]);
+            setReviewedOrderIds((prev) => [...prev, reviewOrder.id]);
             setReviewOrder(null);
           }}
         />
