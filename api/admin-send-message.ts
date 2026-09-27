@@ -119,7 +119,7 @@ async function handleLog(env: Env, res: ApiResponse): Promise<void> {
 }
 
 async function handleSendEmail(env: Env, req: ApiRequest, res: ApiResponse): Promise<void> {
-  const body = (req.body ?? {}) as { userId?: string; subject?: string; html?: string; fromAddress?: string | null; isPromotional?: boolean };
+  const body = (req.body ?? {}) as { userId?: string; subject?: string; html?: string; fromAddress?: string | null };
   if (!body.userId || !body.subject?.trim() || !body.html?.trim()) {
     res.status(400).json({ error: "Missing userId, subject or message." });
     return;
@@ -141,9 +141,8 @@ async function handleSendEmail(env: Env, req: ApiRequest, res: ApiResponse): Pro
 
   const settingsRes = await dbFetch(env.supabaseUrl, env.serviceKey, "site_settings?id=eq.1&select=brand");
   const brand = ((await settingsRes.json().catch(() => [])) as { brand?: string }[])[0]?.brand ?? "Bold & Brilliant";
-  const unsubscribeUrl = `${env.supabaseUrl.replace("supabase.co", "")}`; // placeholder unused, real URL built below
-  void unsubscribeUrl;
 
+  // Unsubscribe link points at this deployment's own /api/unsubscribe endpoint.
   const origin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "";
   const unsubUrl = origin ? `${origin}/api/unsubscribe?u=${encodeURIComponent(body.userId)}` : null;
 
