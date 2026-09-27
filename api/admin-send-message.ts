@@ -1,18 +1,21 @@
 // Hissa 8: ad-hoc messaging from Admin > Customers - send a one-off email or log a WhatsApp
 // message to a specific customer, plus manage the reusable template library (separate from the
-// fixed automatic order/booking emails in Admin > Emails).
+// fixed automatic order/booking emails in Admin > Emails). Also exposes the admin_send_log
+// history so the studio can see what was sent to whom (Admin > Send History).
 //
 //   GET    /api/admin-send-message?resource=templates&channel=email|whatsapp -> list templates
 //   POST   /api/admin-send-message?resource=templates   body: { channel, name, subject?, body }
 //   PATCH  /api/admin-send-message?resource=templates   body: { id, name?, subject?, body }
 //   DELETE /api/admin-send-message?resource=templates&id=<uuid>
-//   POST   /api/admin-send-message?action=send-email     body: { userId, subject, html }
+//   GET    /api/admin-send-message?resource=log         -> { log: SendLogRow[] } (most recent 200)
+//   POST   /api/admin-send-message?action=send-email     body: { userId, subject, html, fromAddress? }
 //   POST   /api/admin-send-message?action=log-whatsapp   body: { userId, body }
 import { checkAdminPassword, dbFetch, getEnv, q, rejectWrongPassword, type ApiRequest, type ApiResponse } from "./_lib/db.js";
 import { getUserEmail, sendRawEmail } from "./_lib/email.js";
 
 type Env = { supabaseUrl: string; serviceKey: string };
 type MessageTemplate = { id: string; channel: "email" | "whatsapp"; name: string; subject: string | null; body: string; sort_order: number };
+type SendLogRow = { id: string; user_id: string; channel: "email" | "whatsapp"; subject: string | null; body: string; sent_at: string };
 
 async function handleTemplates(env: Env, req: ApiRequest, res: ApiResponse): Promise<void> {
   if (req.method === "GET") {
@@ -93,18 +96,62 @@ async function handleTemplates(env: Env, req: ApiRequest, res: ApiResponse): Pro
   res.status(405).json({ error: "Method not allowed" });
 }
 
+// Admin > Send History: every ad-hoc email/WhatsApp message ever sent, newest first, with the
+// customer's name/phone attached so the list is readable without a second lookup.
+async function handleLog(env: Env, res: ApiResponse): Promise<void> {
+  const logRes = await dbFetch(env.supabaseUrl, env.serviceKey, "admin_send_log?select=*&order=sent_at.desc&limit=200");
+  if (!logRes.ok) {
+    res.status(502).json({ error: "Could not load send history." });
+    return;
+  }
+  const log = (await logRes.json()) as SendLogRow[];
+  const userIds = Array.from(new Set(log.map((l) => l.user_id)));
+  if (userIds.length === 0) {
+    res.status(200).json({ log: [] });
+    return;
+  }
+  const profRes = await dbFetch(env.supabaseUrl, env.serviceKey, `profiles?id=in.(${userIds.join(",")})&select=id,full_name,phone`);
+  const profiles = (await profRes.json().catch(() => [])) as { id: string; full_name: string; phone: string }[];
+  const byId = new Map(profiles.map((p) => [p.id, p]));
+  res.status(200).json({
+    log: log.map((l) => ({ ...l, customerName: byId.get(l.user_id)?.full_name ?? "Unknown", customerPhone: byId.get(l.user_id)?.phone ?? "" })),
+  });
+}
+
 async function handleSendEmail(env: Env, req: ApiRequest, res: ApiResponse): Promise<void> {
-  const body = (req.body ?? {}) as { userId?: string; subject?: string; html?: string };
+  const body = (req.body ?? {}) as { userId?: string; subject?: string; html?: string; fromAddress?: string | null; isPromotional?: boolean };
   if (!body.userId || !body.subject?.trim() || !body.html?.trim()) {
     res.status(400).json({ error: "Missing userId, subject or message." });
     return;
   }
+
+  // Respect unsubscribe: never send a promotional/ad-hoc email to a customer who opted out.
+  const profRes = await dbFetch(env.supabaseUrl, env.serviceKey, `profiles?id=eq.${encodeURIComponent(body.userId)}&select=marketing_opt_out`);
+  const profile = ((await profRes.json().catch(() => [])) as { marketing_opt_out?: boolean }[])[0];
+  if (profile?.marketing_opt_out) {
+    res.status(400).json({ error: "This customer has unsubscribed from promotional emails." });
+    return;
+  }
+
   const email = await getUserEmail(env, body.userId);
   if (!email) {
     res.status(400).json({ error: "This customer has no email on file (they may have signed in with phone/social only)." });
     return;
   }
-  const error = await sendRawEmail(email, body.subject, body.html);
+
+  const settingsRes = await dbFetch(env.supabaseUrl, env.serviceKey, "site_settings?id=eq.1&select=brand");
+  const brand = ((await settingsRes.json().catch(() => [])) as { brand?: string }[])[0]?.brand ?? "Bold & Brilliant";
+  const unsubscribeUrl = `${env.supabaseUrl.replace("supabase.co", "")}`; // placeholder unused, real URL built below
+  void unsubscribeUrl;
+
+  const origin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "";
+  const unsubUrl = origin ? `${origin}/api/unsubscribe?u=${encodeURIComponent(body.userId)}` : null;
+
+  const error = await sendRawEmail(email, body.subject, body.html, {
+    fromAddress: body.fromAddress ?? null,
+    unsubscribeUrl: unsubUrl,
+    brand,
+  });
   if (error) {
     res.status(400).json({ error });
     return;
@@ -145,6 +192,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   try {
     if (q(req, "resource") === "templates") {
       await handleTemplates(env, req, res);
+      return;
+    }
+    if (req.method === "GET" && q(req, "resource") === "log") {
+      await handleLog(env, res);
       return;
     }
     if (req.method === "POST" && q(req, "action") === "send-email") {
