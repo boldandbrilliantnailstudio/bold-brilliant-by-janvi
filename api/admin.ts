@@ -1,6 +1,7 @@
 // Single admin endpoint for every simple content table: Shop products, Custom sets, Coupons,
-// Coupon banners, Reviews, Bookings, Custom set requests, Site settings (contacts/hours/social
-// toggles/booking message), Site content (policy pages), the Invoice template and Email templates.
+// Coupon banners, Reviews, Bookings, Services, Booking settings, Custom set requests, Site
+// settings (contacts/hours/social toggles/booking message), Site content (policy pages), the
+// Invoice template and Email templates.
 // Protected by the shared admin password. Env vars (Vercel): ADMIN_PASSWORD,
 // SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL, RESEND_API_KEY (for booking emails),
 // TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (custom request alerts).
@@ -12,7 +13,7 @@
 //   DELETE /api/admin?resource=products&id=<uuid>
 //   POST   /api/admin?resource=bookings&action=email     body: { id } -> emails the customer
 //   POST   /api/admin?resource=custom_requests&action=telegram-setup -> connects the Telegram bot
-// Singleton resources (site_settings, invoice_template) ignore id and always target row 1.
+// Singleton resources (site_settings, invoice_template, booking_settings) always target row 1.
 // site_content and email_templates are keyed by `key` instead of `id`.
 import { checkAdminPassword, dbFetch, getEnv, q, rejectWrongPassword, type ApiRequest, type ApiResponse } from "./_lib/db.js";
 import { bookingVars, sendTemplateEmail } from "./_lib/email.js";
@@ -78,7 +79,24 @@ const RESOURCES: Record<string, Resource> = {
   bookings: {
     table: "bookings",
     order: "created_at.desc",
-    writable: ["status", "admin_note"], // admin can only update status/note, never the request itself
+    // Admin can create bookings (any date/time, even blocked slots) and reschedule them.
+    writable: [
+      "status", "admin_note", "preferred_date", "preferred_time", "service",
+      "name", "phone", "email", "location_type", "location_address", "message", "created_by_admin",
+    ],
+    allowInsert: true,
+  },
+  services: {
+    table: "services",
+    order: "sort_order.asc",
+    writable: ["name", "price", "duration_minutes", "image_url", "is_active", "allow_home_visit", "show_price", "sort_order"],
+    allowInsert: true,
+    allowDelete: true,
+  },
+  booking_settings: {
+    table: "booking_settings",
+    writable: ["working_days", "open_time", "close_time", "slot_minutes", "per_slot", "holidays", "show_prices", "hidden_price_text"],
+    singleton: true,
   },
   custom_requests: {
     table: "custom_requests",
