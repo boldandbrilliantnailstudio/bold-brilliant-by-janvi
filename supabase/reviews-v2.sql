@@ -7,7 +7,7 @@
 --    write-review-dialog.tsx and src/pages/_components/my-orders.tsx already, but - like
 --    product_id before supabase/product-page.sql - the column never actually existed, so every
 --    "Write a Review" submission from My Orders was silently failing until this runs.
--- 3ize Reviews now publish instantly (no admin approval wait) - customers can only write one in
+-- 3) Reviews now publish instantly (no admin approval wait) - customers can only write one in
 --    the first place because /api/submit-review checks they actually have a Delivered order or
 --    Completed booking for it (or, for a product review, a Delivered order that contains that
 --    product) before it ever reaches this table. Direct inserts from the browser are removed;
@@ -49,7 +49,17 @@ drop policy if exists "Customers can add their own order review" on public.revie
 revoke insert on public.reviews from authenticated;
 
 -- Customers can still check whether they already reviewed something (their own rows only) -
--- used by the product page and My Orders to show "You reviewed this" instead of the form again.
+-- used by the product page and My Orders/My Bookings to show "You reviewed this" instead of
+-- the form again.
 drop policy if exists "Customers can view their own review" on public.reviews;
 create policy "Customers can view their own review" on public.reviews for select to authenticated
   using ((select auth.uid()) = user_id);
+
+-- My Bookings (src/pages/_components/my-bookings.tsx) needs to show the signed-in customer's
+-- own bookings, so they can write a studio review after a Completed appointment. Bookings had
+-- no customer-facing read policy before (admin/service-role only) - this adds one for just the
+-- customer's own rows.
+drop policy if exists "Customers can view their own bookings" on public.bookings;
+create policy "Customers can view their own bookings" on public.bookings for select to authenticated
+  using ((select auth.uid()) = user_id);
+grant select on public.bookings to authenticated;
