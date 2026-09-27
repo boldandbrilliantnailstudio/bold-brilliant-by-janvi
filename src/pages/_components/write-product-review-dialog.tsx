@@ -1,6 +1,7 @@
-// Lets any signed-in customer write a review for a specific shop product, optionally with a
-// "worn it" photo. Saved hidden (is_published = false) - only shows on the product page after
-// the studio owner approves it from Admin > Reviews. One review per customer per product.
+// Lets any signed-in customer write a review for a specific shop product, with up to 3
+// "worn it" photos. Goes through /api/submit-review, which checks the customer actually has a
+// Delivered order containing this product before saving - the review publishes instantly once
+// that check passes. One review per customer per product.
 import { useState } from "react";
 import { Loader2, Star, Camera, X } from "lucide-react";
 import { toast } from "sonner";
@@ -14,21 +15,29 @@ type Props = {
   productId: string;
   productName: string;
   customerName: string;
-  userId: string;
   onSubmitted: () => void;
 };
 
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+const MAX_PHOTOS = 3;
 
-export default function WriteProductReviewDialog({ open, onClose, productId, productName, customerName, userId, onSubmitted }: Props) {
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Could not read the file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function WriteProductReviewDialog({ open, onClose, productId, productName, customerName, onSubmitted }: Props) {
   const [rating, setRating] = useState(5);
   const [body, setBody] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pickPhoto = (file: File) => {
+  const addPhoto = (file: File) => {
     if (!file.type.startsWith("image/")) {
       setError("Please choose an image file.");
       return;
@@ -37,10 +46,12 @@ export default function WriteProductReviewDialog({ open, onClose, productId, pro
       setError("Photo is too large. Please use a file under 3MB.");
       return;
     }
+    if (photos.length >= MAX_PHOTOS) return;
     setError(null);
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    setPhotos((prev) => [...prev, { file, preview: URL.createObjectURL(file) }]);
   };
+
+  const removePhoto = (index: number) => setPhotos((prev) => prev.filter((_, i) => i !== index));
 
   const submit = async () => {
     if (body.trim().length < 5) {
@@ -51,34 +62,27 @@ export default function WriteProductReviewDialog({ open, onClose, productId, pro
     setError(null);
     setSaving(true);
 
-    let photoUrl: string | null = null;
-    if (photoFile) {
-      const ext = photoFile.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      const path = `review-photos/${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("site-media").upload(path, photoFile, { contentType: photoFile.type });
-      if (uploadError) {
-        setSaving(false);
-        setError("Could not upload your photo. Please try again.");
-        return;
-      }
-      photoUrl = supabase.storage.from("site-media").getPublicUrl(path).data.publicUrl;
-    }
-
-    const { error: dbError } = await supabase.from("reviews").insert({
-      customer_name: customerName,
-      rating,
-      body: body.trim(),
-      photo_url: photoUrl,
-      product_id: productId,
-      user_id: userId,
-      is_published: false,
-    });
-    setSaving(false);
-    if (dbError) {
-      setError(dbError.message.includes("duplicate") ? "You've already reviewed this product." : "Could not submit your review. Please try again.");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setSaving(false);
+      setError("Please sign in again to continue.");
       return;
     }
-    toast.success("Thank you! Your review will appear once approved.");
+
+    const photoDataUrls = await Promise.all(photos.map((p) => readAsDataUrl(p.file)));
+    const res = await fetch("/api/submit-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ rating, body: body.trim(), customerName, productId, photos: photoDataUrls }),
+    }).catch(() => null);
+    const data = (await res?.json().catch(() => ({}))) as { ok?: boolean; error?: string } | undefined;
+    setSaving(false);
+    if (!res?.ok || !data?.ok) {
+      setError(data?.error ?? "Could not submit your review. Please try again.");
+      return;
+    }
+    toast.success("Thank you for your review!");
     onSubmitted();
   };
 
@@ -103,36 +107,36 @@ export default function WriteProductReviewDialog({ open, onClose, productId, pro
             <Textarea rows={4} placeholder="Tell other customers what you loved..." className="rounded-xl bg-background/70" value={body} onChange={(e) => setBody(e.target.value)} />
           </div>
           <div>
-            <p className="pb-2 text-sm font-medium">Add a Photo (optional)</p>
-            {photoPreview ? (
-              <div className="relative size-20">
-                <img src={photoPreview} alt="Your photo" className="size-20 rounded-xl object-cover" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPhotoFile(null);
-                    setPhotoPreview(null);
-                  }}
-                  aria-label="Remove photo"
-                  className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-destructive text-destructive-foreground"
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-            ) : (
-              <label className="inline-flex h-20 w-20 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed text-muted-foreground hover:bg-muted">
-                <Camera className="size-6" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) pickPhoto(file);
-                  }}
-                />
-              </label>
-            )}
+            <p className="pb-2 text-sm font-medium">Add Photos (optional, up to {MAX_PHOTOS})</p>
+            <div className="flex flex-wrap gap-2">
+              {photos.map((p, i) => (
+                <div key={i} className="relative size-20">
+                  <img src={p.preview} alt="Your photo" className="size-20 rounded-xl object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    aria-label="Remove photo"
+                    className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-destructive text-destructive-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <label className="inline-flex h-20 w-20 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed text-muted-foreground hover:bg-muted">
+                  <Camera className="size-6" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) addPhoto(file);
+                    }}
+                  />
+                </label>
+              )}
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <button
