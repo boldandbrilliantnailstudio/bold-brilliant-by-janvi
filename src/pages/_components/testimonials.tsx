@@ -23,7 +23,10 @@ export default function Testimonials() {
                 <p className="flex-1 pt-4 text-sm text-muted-foreground">&ldquo;{r.text}&rdquo;</p>
                 <div className="flex items-center gap-3 pt-4">
                   {r.photoUrl && <img src={r.photoUrl} alt={r.name} className="size-10 rounded-full object-cover" />}
-                  <p className="font-serif text-lg leading-tight">{r.name}</p>
+                  <div>
+                    <p className="font-serif text-lg leading-tight">{r.name}</p>
+                    {r.serviceName && <p className="text-xs text-muted-foreground">{r.serviceName}</p>}
+                  </div>
                 </div>
               </div>
             ))}
