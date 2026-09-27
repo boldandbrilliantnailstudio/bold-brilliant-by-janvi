@@ -59,7 +59,7 @@ const RESOURCES: Record<string, Resource> = {
   reviews: {
     table: "reviews",
     order: "sort_order.asc",
-    writable: ["customer_name", "rating", "body", "photo_url", "is_published", "sort_order"],
+    writable: ["customer_name", "rating", "body", "photo_url", "service_name", "is_published", "sort_order"],
     allowInsert: true,
     allowDelete: true,
   },
