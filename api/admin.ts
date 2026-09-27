@@ -44,10 +44,15 @@ const RESOURCES: Record<string, Resource> = {
     order: "created_at.desc",
     writable: [
       "code", "discount_type", "discount_value", "max_discount", "min_order_amount",
-      "usage_limit", "per_user_limit", "starts_at", "expires_at", "is_active",
+      "usage_limit", "per_user_limit", "starts_at", "expires_at", "is_active", "user_id", "scope",
     ],
     allowInsert: true,
     allowDelete: true,
+  },
+  coupon_settings: {
+    table: "coupon_settings",
+    writable: ["default_discount_type", "default_discount_value", "default_scope", "default_validity_days"],
+    singleton: true,
   },
   promo_banners: {
     table: "promo_banners",
