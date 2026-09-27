@@ -95,11 +95,11 @@ export const fromRow = (r: ProfileRow): ProfileValues => ({
   gstin: r.gstin ?? "",
 });
 
-export const toRow = (id: string, v: ProfileValues): ProfileRow => ({
+// Never include customer_number when writing: a new row gets one from the database's
+// sequence default, and omitting it on update leaves the customer's existing number untouched
+// (an upsert only overwrites the columns present in the payload).
+export const toRow = (id: string, v: ProfileValues): Omit<ProfileRow, "customer_number"> => ({
   id,
-  // A new row lets the database assign the next customer_number (sequence default).
-  // Existing rows keep their number, but we still need a placeholder value for the type.
-  customer_number: 0,
   full_name: v.fullName,
   phone: v.phone,
   alt_phone: v.altPhone || null,
