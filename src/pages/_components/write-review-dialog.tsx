@@ -1,6 +1,7 @@
-// Lets a signed-in customer write a studio review for one of their own Delivered orders. Goes
-// through /api/submit-review, which checks the order really is Delivered and belongs to this
-// customer before saving - it then publishes instantly and shows in the homepage Testimonials.
+// Lets a signed-in customer write a studio review for one of their own Delivered orders or
+// Completed bookings (pass exactly one of orderId/bookingId). Goes through /api/submit-review,
+// which checks it really is Delivered/Completed and belongs to this customer before saving -
+// it then publishes instantly and shows in the homepage Testimonials.
 import { useState } from "react";
 import { Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -11,13 +12,14 @@ import { supabase } from "@/lib/supabase.ts";
 type Props = {
   open: boolean;
   onClose: () => void;
-  orderId: string;
+  orderId?: string;
+  bookingId?: string;
   productName: string;
   customerName: string;
   onSubmitted: () => void;
 };
 
-export default function WriteReviewDialog({ open, onClose, orderId, productName, customerName, onSubmitted }: Props) {
+export default function WriteReviewDialog({ open, onClose, orderId, bookingId, productName, customerName, onSubmitted }: Props) {
   const [rating, setRating] = useState(5);
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
@@ -43,7 +45,7 @@ export default function WriteReviewDialog({ open, onClose, orderId, productName,
     const res = await fetch("/api/submit-review", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ rating, body: body.trim(), customerName, orderId }),
+      body: JSON.stringify({ rating, body: body.trim(), customerName, orderId, bookingId }),
     }).catch(() => null);
     const data = (await res?.json().catch(() => ({}))) as { ok?: boolean; error?: string } | undefined;
     setSaving(false);
