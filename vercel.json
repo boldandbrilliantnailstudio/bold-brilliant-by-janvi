@@ -6,6 +6,12 @@
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/admin/(.*)", "destination": "/index.html" },
     { "source": "/shop", "destination": "/index.html" },
+    {
+      "source": "/shop/:slug",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|SkypeUriPreview).*" }],
+      "destination": "/api/shop-meta?slug=:slug"
+    },
+    { "source": "/shop/:slug", "destination": "/index.html" },
     { "source": "/book", "destination": "/index.html" },
     { "source": "/orders", "destination": "/index.html" },
     { "source": "/profile", "destination": "/index.html" },
