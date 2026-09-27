@@ -10,9 +10,9 @@ import Reveal, { SectionHeading } from "@/components/reveal.tsx";
 import { toast } from "sonner";
 import { useSiteSettings } from "@/hooks/use-site-settings.tsx";
 import { useProfile } from "@/hooks/use-profile.ts";
+import { useBookingServices, useFreeSlots } from "@/hooks/use-booking-options.ts";
 import { supabase } from "@/lib/supabase.ts";
 
-const SERVICES = ["Classic Nail Art", "French Nails", "3D Nail Art", "Bridal Nails", "Luxury Nail Art", "Custom Design"] as const;
 const LOCATION_TYPES = ["studio", "home"] as const;
 
 const schema = z
@@ -21,8 +21,8 @@ const schema = z
     phone: z.string().trim().regex(/^\+?[0-9\s-]{10,15}$/, "Enter a valid WhatsApp number"),
     email: z.union([z.literal(""), z.string().trim().email("Enter a valid email")]).optional(),
     date: z.string().min(1, "Choose a date"),
-    time: z.string().min(1, "Choose a time"),
-    service: z.enum(SERVICES, { message: "Select a service" }),
+    time: z.string().min(1, "Choose a time slot"),
+    service: z.string().min(1, "Select a service"),
     message: z.string().max(500).optional(),
     locationType: z.enum(LOCATION_TYPES, { message: "Select a location" }),
     locationAddress: z.string().trim().max(300).optional(),
@@ -92,6 +92,7 @@ export default function Booking() {
   const today = new Date().toISOString().slice(0, 10);
   const settings = useSiteSettings();
   const { isSignedIn, profile, openProfile } = useProfile();
+  const { services, priceLabel } = useBookingServices();
   const [email, setEmail] = useState("");
   const [confirmed, setConfirmed] = useState<Confirmed | null>(null);
   const {
@@ -102,8 +103,14 @@ export default function Booking() {
     setValue,
     getValues,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { locationType: "studio" } });
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { locationType: "studio", time: "" } });
   const locationType = watch("locationType");
+  const date = watch("date");
+  const time = watch("time");
+  const serviceName = watch("service");
+  const slots = useFreeSlots(date);
+  const selectedService = services?.find((s) => s.name === serviceName);
+  const homeAllowed = selectedService?.allow_home_visit ?? true;
 
   // Sign-in email comes from the auth session, not the profile.
   useEffect(() => {
@@ -122,6 +129,12 @@ export default function Booking() {
     }
     fill("email", email);
   }, [profile, email, getValues, setValue]);
+
+  // Picking a new date clears the old slot; a service without home visits forces studio.
+  useEffect(() => setValue("time", ""), [date, setValue]);
+  useEffect(() => {
+    if (!homeAllowed) setValue("locationType", "studio");
+  }, [homeAllowed, setValue]);
 
   // Booking goes to /api/booking, which saves it to Admin > Bookings and emails the owner.
   const onSubmit = async (d: FormValues) => {
@@ -147,7 +160,7 @@ export default function Booking() {
       return;
     }
     setConfirmed({ ...d, bookingNumber: data.bookingNumber });
-    reset({ locationType: "studio", name: d.name, phone: d.phone, email: d.email });
+    reset({ locationType: "studio", name: d.name, phone: d.phone, email: d.email, time: "" });
   };
 
   const err = (k: keyof FormValues) => errors[k] && <p className="pt-1 text-xs text-destructive">{errors[k]?.message}</p>;
@@ -157,7 +170,7 @@ export default function Booking() {
       <div className="absolute -right-32 top-20 h-80 w-80 rounded-full bg-primary/20 blur-[70px]" />
       <div className="absolute -left-32 bottom-10 h-80 w-80 rounded-full bg-accent/30 blur-[70px]" />
       <div className="relative mx-auto max-w-3xl">
-        <SectionHeading eyebrow="Appointments" title="Book Your Nail Appointment" sub="Fill in your details and we'll confirm your slot." />
+        <SectionHeading eyebrow="Appointments" title="Book Your Nail Appointment" sub="Fill in your details and pick a free slot." />
         <Reveal>
           {!isSignedIn ? (
             <SignInGate onSignIn={() => openProfile()} />
@@ -180,24 +193,60 @@ export default function Booking() {
                 <Input id="email" type="email" placeholder="priya@gmail.com" className={FIELD} {...register("email")} />
                 {err("email")}
               </div>
-              <div>
-                <Label htmlFor="date" className="pb-2">Preferred Date</Label>
+              <div className="sm:col-span-2">
+                <Label className="pb-2">Nail Art Service</Label>
+                {services === null ? (
+                  <p className="text-sm text-muted-foreground">Loading services...</p>
+                ) : services.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No services available right now. Please message us on WhatsApp.</p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {services.map((s) => (
+                      <label
+                        key={s.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-colors ${serviceName === s.name ? "border-primary bg-primary/5" : "border-input bg-background/70"}`}
+                      >
+                        <input type="radio" value={s.name} className="sr-only" {...register("service")} />
+                        {s.image_url && <img src={s.image_url} alt={s.name} className="size-12 shrink-0 rounded-lg object-cover" />}
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{s.name}</span>
+                          <span className="block text-xs text-muted-foreground">{priceLabel(s)} · {s.duration_minutes} min</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {err("service")}
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="date" className="pb-2">Date</Label>
                 <Input id="date" type="date" min={today} className={FIELD} {...register("date")} />
                 {err("date")}
               </div>
-              <div>
-                <Label htmlFor="time" className="pb-2">Preferred Time</Label>
-                <Input id="time" type="time" className={FIELD} {...register("time")} />
-                {err("time")}
-              </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="service" className="pb-2">Nail Art Service</Label>
-                <select id="service" defaultValue="" className={`${FIELD} w-full cursor-pointer border border-input px-3 text-sm`} {...register("service")}>
-                  <option value="" disabled>Select a service</option>
-                  {SERVICES.map((s) => <option key={s}>{s}</option>)}
-                </select>
-                {err("service")}
-              </div>
+              {date && (
+                <div className="sm:col-span-2">
+                  <Label className="pb-2">Free Time Slots</Label>
+                  {slots === null ? (
+                    <p className="text-sm text-muted-foreground">Checking free slots...</p>
+                  ) : slots.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No free slots on this day (closed or fully booked). Please pick another date.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {slots.map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setValue("time", t, { shouldValidate: true })}
+                          className={`h-10 cursor-pointer rounded-full border-2 px-4 text-sm font-medium transition-colors ${time === t ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background/70 hover:border-primary"}`}
+                        >
+                          {formatTime(t)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {err("time")}
+                </div>
+              )}
               <div className="sm:col-span-2">
                 <Label className="pb-2">Where should we do your nails?</Label>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -210,15 +259,17 @@ export default function Booking() {
                       <span className="block pt-1 text-xs text-muted-foreground">{settings.address}</span>
                     </span>
                   </label>
-                  <label
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${locationType === "home" ? "border-primary bg-primary/5" : "border-input bg-background/70"}`}
-                  >
-                    <input type="radio" value="home" className="mt-1 accent-primary" {...register("locationType")} />
-                    <span>
-                      <span className="flex items-center gap-1.5 font-medium"><MapPin className="size-4 text-primary" /> At My Own Location</span>
-                      <span className="block pt-1 text-xs text-muted-foreground">We'll come to your home or venue</span>
-                    </span>
-                  </label>
+                  {homeAllowed && (
+                    <label
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition-colors ${locationType === "home" ? "border-primary bg-primary/5" : "border-input bg-background/70"}`}
+                    >
+                      <input type="radio" value="home" className="mt-1 accent-primary" {...register("locationType")} />
+                      <span>
+                        <span className="flex items-center gap-1.5 font-medium"><MapPin className="size-4 text-primary" /> At My Own Location</span>
+                        <span className="block pt-1 text-xs text-muted-foreground">We'll come to your home or venue</span>
+                      </span>
+                    </label>
+                  )}
                 </div>
                 {err("locationType")}
               </div>
