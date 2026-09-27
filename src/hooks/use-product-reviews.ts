@@ -1,7 +1,7 @@
 // Product-specific reviews (separate from the homepage Testimonials, which are studio-wide).
-// Only reviews tied to a product_id are shown here - always published instantly by
-// /api/submit-review, so no is_published filter is needed on the read side. Reviews with at
-// least one photo are shown first (photo-first sorting), then newest first within each group.
+// Only published reviews tied to a product_id are shown here - reviews publish instantly via
+// /api/submit-review, but the admin can still hide one later (Admin > Reviews > Product Reviews).
+// Reviews with at least one photo are shown first (photo-first sorting), then newest first.
 import { useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase.ts";
 
@@ -22,6 +22,7 @@ export function useProductReviews(productId: string) {
       .from("reviews")
       .select("id,customer_name,rating,body,photo_urls,created_at")
       .eq("product_id", productId)
+      .eq("is_published", true)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         const rows = data as Row[] | null;
