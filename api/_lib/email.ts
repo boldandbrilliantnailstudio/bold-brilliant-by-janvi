@@ -1,5 +1,7 @@
 // Sends transactional emails through Resend using admin-editable HTML templates stored in the
 // email_templates table (Admin > Emails). Each template can be switched on/off.
+// Also supports one-off ad-hoc emails (Hissa 8: Admin > Customers > Send Email) using the
+// message_templates library, and raw sends for custom text.
 // Env vars (Vercel): RESEND_API_KEY (required to send), EMAIL_FROM (e.g. "Bold & Brilliant <hello@yourdomain.com>",
 // needs a domain verified in Resend), ADMIN_NOTIFY_EMAIL (optional, else site_settings.email).
 // Failures never break the order/booking flow - emails are best-effort.
@@ -25,6 +27,12 @@ function fill(text: string, vars: Vars, escape: boolean): string {
     const value = String(vars[key] ?? "");
     return escape ? escapeHtml(value) : value;
   });
+}
+
+// Fills {{name}}, {{coupon}}, and any other placeholder into a subject/body for ad-hoc sends
+// (Hissa 8). Exported so admin-send-message.ts can preview/send with the same substitution logic.
+export function fillTemplate(text: string, vars: Vars, escape: boolean): string {
+  return fill(text, vars, escape);
 }
 
 export async function sendTemplateEmail(env: Env, key: EmailKey, to: string | null | undefined, vars: Vars): Promise<void> {
@@ -54,6 +62,27 @@ export async function sendTemplateEmail(env: Env, key: EmailKey, to: string | nu
     });
   } catch {
     // Best-effort: never fail the main request because of an email.
+  }
+}
+
+// Sends a one-off email that isn't one of the fixed automatic templates (Hissa 8: ad-hoc emails
+// from Admin > Customers). Returns an error string on failure, or null on success.
+export async function sendRawEmail(to: string, subject: string, html: string): Promise<string | null> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return "Email is not set up yet. Add RESEND_API_KEY in Vercel env vars.";
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: process.env.EMAIL_FROM || "Bold & Brilliant <onboarding@resend.dev>", to: [to], subject, html }),
+    });
+    if (!r.ok) {
+      const data = (await r.json().catch(() => null)) as { message?: string } | null;
+      return data?.message ?? "Resend rejected this email.";
+    }
+    return null;
+  } catch {
+    return "Could not reach the email service.";
   }
 }
 
