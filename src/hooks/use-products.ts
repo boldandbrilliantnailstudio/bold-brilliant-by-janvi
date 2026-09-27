@@ -1,6 +1,7 @@
 // Live shop products from the database (admin-managed). Only active products are visible here
 // thanks to the "Public can view active products" RLS policy - sold out / hidden ones never
-// reach the browser unless the admin explicitly marked them active.
+// reach the browser unless the admin explicitly marked them active. Each product's extra photos
+// (from product_images, managed in Admin > Shop) are attached as `images`, main photo first.
 import { useEffect, useState } from "react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase.ts";
 
@@ -11,6 +12,7 @@ export type Product = {
   price: number;
   compareAtPrice: number | null;
   imageUrl: string | null;
+  images: string[];
   stock: number | null;
   soldOut: boolean;
 };
@@ -26,16 +28,7 @@ type Row = {
   sold_out: boolean;
 };
 
-const fromRow = (r: Row): Product => ({
-  id: r.id,
-  name: r.name,
-  description: r.description,
-  price: r.price,
-  compareAtPrice: r.compare_at_price,
-  imageUrl: r.image_url,
-  stock: r.stock,
-  soldOut: r.sold_out,
-});
+type ImageRow = { product_id: string; image_url: string };
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[] | null>(null);
@@ -45,12 +38,29 @@ export function useProducts() {
       setProducts([]);
       return;
     }
-    supabase
-      .from("products")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => setProducts(((data as Row[] | null) ?? []).map(fromRow)));
+    void Promise.all([
+      supabase.from("products").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
+      supabase.from("product_images").select("product_id,image_url").order("sort_order", { ascending: true }),
+    ]).then(([productsRes, imagesRes]) => {
+      const rows = (productsRes.data as Row[] | null) ?? [];
+      const imageRows = (imagesRes.data as ImageRow[] | null) ?? [];
+      setProducts(
+        rows.map((r) => {
+          const extra = imageRows.filter((img) => img.product_id === r.id).map((img) => img.image_url);
+          return {
+            id: r.id,
+            name: r.name,
+            description: r.description,
+            price: r.price,
+            compareAtPrice: r.compare_at_price,
+            imageUrl: r.image_url,
+            images: [r.image_url, ...extra].filter((url): url is string => !!url),
+            stock: r.stock,
+            soldOut: r.sold_out,
+          };
+        }),
+      );
+    });
   }, []);
 
   return products;
