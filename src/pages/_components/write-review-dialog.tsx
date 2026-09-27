@@ -1,6 +1,6 @@
-// Lets a signed-in customer write a review for one of their own Delivered orders. The review
-// is saved hidden (is_published = false) - it only appears on the site (Testimonials) after
-// the studio owner approves it from Admin > Reviews.
+// Lets a signed-in customer write a studio review for one of their own Delivered orders. Goes
+// through /api/submit-review, which checks the order really is Delivered and belongs to this
+// customer before saving - it then publishes instantly and shows in the homepage Testimonials.
 import { useState } from "react";
 import { Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -14,11 +14,10 @@ type Props = {
   orderId: string;
   productName: string;
   customerName: string;
-  userId: string;
   onSubmitted: () => void;
 };
 
-export default function WriteReviewDialog({ open, onClose, orderId, productName, customerName, userId, onSubmitted }: Props) {
+export default function WriteReviewDialog({ open, onClose, orderId, productName, customerName, onSubmitted }: Props) {
   const [rating, setRating] = useState(5);
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
@@ -32,20 +31,27 @@ export default function WriteReviewDialog({ open, onClose, orderId, productName,
     if (!supabase) return;
     setError(null);
     setSaving(true);
-    const { error: dbError } = await supabase.from("reviews").insert({
-      customer_name: customerName,
-      rating,
-      body: body.trim(),
-      order_id: orderId,
-      user_id: userId,
-      is_published: false,
-    });
-    setSaving(false);
-    if (dbError) {
-      setError(dbError.message.includes("duplicate") ? "You've already reviewed this order." : "Could not submit your review. Please try again.");
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setSaving(false);
+      setError("Please sign in again to continue.");
       return;
     }
-    toast.success("Thank you! Your review will appear once approved.");
+
+    const res = await fetch("/api/submit-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ rating, body: body.trim(), customerName, orderId }),
+    }).catch(() => null);
+    const data = (await res?.json().catch(() => ({}))) as { ok?: boolean; error?: string } | undefined;
+    setSaving(false);
+    if (!res?.ok || !data?.ok) {
+      setError(data?.error ?? "Could not submit your review. Please try again.");
+      return;
+    }
+    toast.success("Thank you for your review!");
     onSubmitted();
   };
 
