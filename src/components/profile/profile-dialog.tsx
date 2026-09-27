@@ -11,6 +11,8 @@ type Props = {
   startInEdit: boolean;
   profile: ProfileValues | null;
   email: string | null;
+  customerId: string | null;
+  avatarUrl: string | null;
   onClose: () => void;
   onSave: (values: ProfileValues) => Promise<void>;
   onSignOut: () => void;
@@ -30,8 +32,19 @@ export default function ProfileDialog(props: Props) {
   );
 }
 
+function AvatarCircle({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} alt={name} className="size-14 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />;
+  }
+  return (
+    <div className="grid size-14 shrink-0 place-items-center rounded-full bg-primary font-serif text-2xl font-semibold text-primary-foreground">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 // Lives inside DialogContent so the edit state resets every time the dialog opens.
-function ProfileBody({ required, startInEdit, profile, email, onClose, onSave, onSignOut }: Props) {
+function ProfileBody({ required, startInEdit, profile, email, customerId, avatarUrl, onClose, onSave, onSignOut }: Props) {
   const [editing, setEditing] = useState(startInEdit);
 
   if (!profile || editing) {
@@ -80,12 +93,11 @@ function ProfileBody({ required, startInEdit, profile, email, onClose, onSave, o
   return (
     <>
       <div className="flex items-center gap-4 pr-6">
-        <div className="grid size-14 shrink-0 place-items-center rounded-full bg-primary font-serif text-2xl font-semibold text-primary-foreground">
-          {profile.fullName.charAt(0).toUpperCase()}
-        </div>
+        <AvatarCircle name={profile.fullName} avatarUrl={avatarUrl} />
         <div className="min-w-0">
           <DialogTitle className="truncate font-serif text-2xl">{profile.fullName}</DialogTitle>
           {email && <p className="truncate text-sm text-muted-foreground">{email}</p>}
+          {customerId && <p className="truncate text-xs text-muted-foreground">Customer ID: {customerId}</p>}
         </div>
       </div>
 
