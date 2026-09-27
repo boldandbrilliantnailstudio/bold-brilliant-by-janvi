@@ -1,1 +1,15 @@
-LS0gUnVuIGFmdGVyIHN1cGFiYXNlL3Jldmlld3MtdjIuc3FsLiBBZGRzIGEgc2VydmljZV9uYW1lIGNvbHVtbiBzbyBhIHN0dWRpbyByZXZpZXcKLS0gd3JpdHRlbiBhZnRlciBhIGNvbXBsZXRlZCBib29raW5nIGNhbiBzaG93IHdoaWNoIHNlcnZpY2UgaXQgd2FzIGFib3V0IChlLmcuICJHZWwKLS0gRXh0ZW5zaW9ucyIpIG9uIHRoZSBob21lcGFnZSBUZXN0aW1vbmlhbHMgc2VjdGlvbi4gU2FmZSB0byBydW4gYWdhaW4uCgphbHRlciB0YWJsZSBwdWJsaWMucmV2aWV3cwogIGFkZCBjb2x1bW4gaWYgbm90IGV4aXN0cyBzZXJ2aWNlX25hbWUgdGV4dDsKCi0tIEJhY2tmaWxsIGFueSBleGlzdGluZyBib29raW5nLWxpbmtlZCByZXZpZXdzIHRoYXQgcHJlZGF0ZSB0aGlzIGNvbHVtbi4KdXBkYXRlIHB1YmxpYy5yZXZpZXdzIHIKc2V0IHNlcnZpY2VfbmFtZSA9IGIuc2VydmljZQpmcm9tIHB1YmxpYy5ib29raW5ncyBiCndoZXJlIHIuYm9va2luZ19pZCA9IGIuaWQgYW5kIHIuc2VydmljZV9uYW1lIGlzIG51bGw7CgotLSBBZG1pbi1hZGRlZCByZXZpZXdzICgvYXBpL2FkbWluIHJlc291cmNlPXJldmlld3MpIGNhbiBhbHNvIHNldCBhIHNlcnZpY2UgbmFtZQotLSBkaXJlY3RseSwgc28gdGhlIHN0dWRpbyBvd25lciBjYW4gdGFnIGEgbWFudWFsbHktZW50ZXJlZCByZXZpZXcgd2l0aCBhIHNlcnZpY2UgdG9vLgo=
+-- Run after supabase/reviews-v2.sql. Adds a service_name column so a studio review
+-- written after a completed booking can show which service it was about (e.g. "Gel
+-- Extensions") on the homepage Testimonials section. Safe to run again.
+
+alter table public.reviews
+  add column if not exists service_name text;
+
+-- Backfill any existing booking-linked reviews that predate this column.
+update public.reviews r
+set service_name = b.service
+from public.bookings b
+where r.booking_id = b.id and r.service_name is null;
+
+-- Admin-added reviews (/api/admin resource=reviews) can also set a service name
+-- directly, so the studio owner can tag a manually-entered review with a service too.
