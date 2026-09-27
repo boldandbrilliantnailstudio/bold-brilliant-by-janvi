@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarCheck, CheckCircle2, LogIn, MapPin } from "lucide-react";
+import { CalendarCheck, CheckCircle2, LogIn, MapPin, Tag } from "lucide-react";
 import { Input } from "@/components/ui/input.tsx";
 import { Textarea } from "@/components/ui/textarea.tsx";
 import { Label } from "@/components/ui/label.tsx";
@@ -26,6 +26,7 @@ const schema = z
     message: z.string().max(500).optional(),
     locationType: z.enum(LOCATION_TYPES, { message: "Select a location" }),
     locationAddress: z.string().trim().max(300).optional(),
+    couponCode: z.string().trim().max(30).optional(),
   })
   .refine((d) => d.locationType !== "home" || (d.locationAddress?.trim().length ?? 0) >= 5, {
     message: "Please enter your address for a home visit",
@@ -152,12 +153,18 @@ export default function Booking() {
         email: d.email?.trim() || undefined,
         message: d.message ?? "",
         locationAddress: d.locationType === "home" ? d.locationAddress?.trim() : undefined,
+        couponCode: d.couponCode?.trim() || undefined,
       }),
     }).catch(() => null);
-    const data = (await res?.json().catch(() => ({}))) as { bookingNumber?: number; error?: string } | undefined;
+    const data = (await res?.json().catch(() => ({}))) as { bookingNumber?: number; couponApplied?: string | null; couponError?: string | null; error?: string } | undefined;
     if (!res?.ok || typeof data?.bookingNumber !== "number") {
       toast.error(data?.error ?? "Could not send your booking request. Please try again.");
       return;
+    }
+    if (d.couponCode?.trim() && !data.couponApplied) {
+      toast.error(data.couponError ?? "That coupon code isn't valid, so it wasn't applied.");
+    } else if (data.couponApplied) {
+      toast.success(`Coupon ${data.couponApplied} applied! The studio will apply the discount.`);
     }
     setConfirmed({ ...d, bookingNumber: data.bookingNumber });
     reset({ locationType: "studio", name: d.name, phone: d.phone, email: d.email, time: "" });
@@ -280,6 +287,11 @@ export default function Booking() {
                   {err("locationAddress")}
                 </div>
               )}
+              <div className="sm:col-span-2">
+                <Label htmlFor="couponCode" className="flex items-center gap-1.5 pb-2"><Tag className="size-3.5" /> Coupon Code (optional)</Label>
+                <Input id="couponCode" placeholder="e.g. WELCOME10" className={`${FIELD} uppercase`} {...register("couponCode")} />
+                <p className="pt-1 text-xs text-muted-foreground">The studio will apply the discount when you arrive or pay.</p>
+              </div>
               <div className="sm:col-span-2">
                 <Label htmlFor="message" className="pb-2">Message (optional)</Label>
                 <Textarea id="message" rows={3} placeholder="Any design ideas or reference?" className="rounded-xl bg-background/70" {...register("message")} />
