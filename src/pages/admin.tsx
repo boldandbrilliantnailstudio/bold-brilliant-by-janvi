@@ -14,6 +14,7 @@ import CustomSetsTab from "./_admin/custom-sets-tab.tsx";
 import CouponsTab from "./_admin/coupons-tab.tsx";
 import BannersTab from "./_admin/banners-tab.tsx";
 import BookingsTab from "./_admin/bookings-tab.tsx";
+import ServicesTab from "./_admin/services-tab.tsx";
 import CustomRequestsTab from "./_admin/custom-requests-tab.tsx";
 import ReviewsTab from "./_admin/reviews-tab.tsx";
 import SiteSettingsTab from "./_admin/site-settings-tab.tsx";
@@ -25,6 +26,7 @@ const TABS = [
   { id: "dashboard", label: "Dashboard", group: "manage", Component: DashboardTab },
   { id: "orders", label: "Orders", group: "manage", Component: OrdersTab },
   { id: "bookings", label: "Bookings", group: "manage", Component: BookingsTab },
+  { id: "services", label: "Services & Slots", group: "manage", Component: ServicesTab },
   { id: "requests", label: "Custom Requests", group: "manage", Component: CustomRequestsTab },
   { id: "products", label: "Shop", group: "manage", Component: ProductsTab },
   { id: "custom-sets", label: "Custom Sets", group: "manage", Component: CustomSetsTab },
