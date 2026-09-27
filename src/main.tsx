@@ -3,6 +3,7 @@ import { Toaster } from "sonner";
 import "./index.css";
 import Index from "./pages/Index.tsx";
 import ShopPage from "./pages/Shop.tsx";
+import ProductPage from "./pages/Product.tsx";
 import BookPage from "./pages/Book.tsx";
 import OrdersPage from "./pages/Orders.tsx";
 import ProfilePage from "./pages/Profile.tsx";
@@ -15,9 +16,12 @@ import ProfileProvider from "./components/profile/profile-provider.tsx";
 // /admin shows a separate password-gated dashboard for the studio owner - see src/pages/admin.tsx.
 // Shop, Book, Orders, Profile and Founder each have their own standalone page (no home page
 // sections) - see src/pages/Shop.tsx, Book.tsx, Orders.tsx, Profile.tsx and Founder.tsx.
+// /shop/<slug> is a single product's own page (see src/pages/Product.tsx) - it's checked before
+// the plain /shop list so a product slug never falls through to the shop grid.
 const path = window.location.pathname;
 const isAdmin = path.startsWith("/admin");
-const isShop = path.startsWith("/shop");
+const productSlugMatch = /^\/shop\/([^/]+)\/?$/.exec(path);
+const isShop = !productSlugMatch && path.startsWith("/shop");
 const isBook = path.startsWith("/book");
 const isOrders = path.startsWith("/orders");
 const isProfile = path.startsWith("/profile");
@@ -43,6 +47,7 @@ window.addEventListener("load", forceScrollTop);
 window.addEventListener("pageshow", forceScrollTop);
 
 function CurrentPage() {
+  if (productSlugMatch) return <ProductPage slug={decodeURIComponent(productSlugMatch[1])} />;
   if (isShop) return <ShopPage />;
   if (isBook) return <BookPage />;
   if (isOrders) return <OrdersPage />;
